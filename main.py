@@ -1,5 +1,5 @@
 """
-MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용 완전판)
+MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용 완전판 - 전체 리포트 전송 수정본)
 기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(상승/하락/동일), 역대 최저가 추적, 텔레그램 알림, 자동 저장
 """
 
@@ -223,7 +223,7 @@ def match_hotels(amex_list, maxfhr_list):
             
     return matched
 
-# --- [메인 실행 로직] ---
+# --- [메인 실행 로직 (이 부분이 수정됨!)] ---
 
 async def run():
     token = os.getenv("TELEGRAM_TOKEN")
@@ -256,7 +256,8 @@ async def run():
         
         drop_msgs = []      # 하락
         rise_msgs = []      # 상승
-        new_msgs = []       # 신규/첫실행
+        new_msgs = []       # 신규
+        same_msgs = []      # 변동 없음 (★ 추가됨)
         
         print("\n💰 가격 분석 중...")
         for item in final_list:
@@ -303,53 +304,57 @@ async def run():
                 msg = f"🔺 <b>{name}</b>\n💰 ${old_price} → ${price}{date_txt}"
                 rise_msgs.append(msg)
                 
-            # [케이스 3] 신규 발견 (또는 히스토리 없음)
+            # [케이스 3] 신규 발견
             elif is_new:
                 msg = f"🆕 <b>{name}</b>\n💰 <b>${price}</b> 시작{date_txt}{promo_txt}"
                 new_msgs.append(msg)
 
+            # [케이스 4] 변동 없음 (★ 추가됨)
+            else:
+                msg = f"🏨 <b>{name}</b>\n💰 <b>${price}</b>{date_txt}{promo_txt}"
+                same_msgs.append(msg)
+
         # 4. 저장
         save_price_history(new_history)
         
-        # 5. 전송 (하락 정보만 모아서, 혹은 전체)
-        # 중요: 너무 많으면 나눠서 보냄
+        # 5. 전송 (모든 상태 포함)
         messages = []
         
-        # 하락 정보 담기
+        # 헤더
+        messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        
         if drop_msgs: 
-            messages.append("<b>📉 가격이 떨어진 호텔</b>\n" + "\n\n".join(drop_msgs))
+            messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n" + "\n\n".join(drop_msgs))
         
-        # 신규 정보 담기 (주석 해제 완료)
         if new_msgs: 
-            messages.append("\n\n<b>🆕 새로 발견된 호텔</b>\n" + "\n".join(new_msgs))
+            messages.append(f"\n<b>🆕 신규 발견 ({len(new_msgs)}개)</b>\n" + "\n".join(new_msgs))
             
-        # 상승 정보 담기 (주석 해제 완료)
         if rise_msgs: 
-            messages.append("\n\n<b>🔺 가격이 오른 호텔</b>\n" + "\n".join(rise_msgs))
-        
-        # 메시지가 하나라도 있으면 전송
-        if messages:
-            final_msg = "\n" + "="*20 + "\n" + "".join(messages)
+            messages.append(f"\n<b>🔺 가격 상승 ({len(rise_msgs)}개)</b>\n" + "\n".join(rise_msgs))
+
+        # ★ 변동 없음도 무조건 전송
+        if same_msgs:
+            messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n" + "\n\n".join(same_msgs))
             
-            # 메시지가 너무 길면(4096자 제한) 잘라서 보내기
-            if len(final_msg) > 4000:
-                for i in range(0, len(final_msg), 4000):
-                    await bot.send_message(
-                        chat_id=chat_id, 
-                        text=final_msg[i:i+4000], 
-                        parse_mode="HTML", 
-                        disable_web_page_preview=True
-                    )
-            else:
+        # 메시지 조합 및 전송
+        final_msg = "\n" + "="*20 + "\n" + "".join(messages)
+        
+        if len(final_msg) > 4000:
+            for i in range(0, len(final_msg), 4000):
                 await bot.send_message(
                     chat_id=chat_id, 
-                    text=final_msg, 
+                    text=final_msg[i:i+4000], 
                     parse_mode="HTML", 
                     disable_web_page_preview=True
                 )
-            print("✅ 알림 전송 완료 (하락/신규/상승 모두 포함)")
         else:
-            print("📭 변동 사항 없음")
+            await bot.send_message(
+                chat_id=chat_id, 
+                text=final_msg, 
+                parse_mode="HTML", 
+                disable_web_page_preview=True
+            )
+        print("✅ 전체 리포트 전송 완료")
 
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
