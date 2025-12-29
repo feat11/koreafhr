@@ -32,7 +32,7 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           # ★중요★ 테스트를 위해 '채널ID' 자리에 '개인ID'를 넣었습니다!
-          CHANNEL_CHAT_ID: ${{ secrets.PERSONAL_CHAT_ID }}
+          CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
         run: python main.py
 
       - name: 가격 정보 저장
