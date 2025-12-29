@@ -41,5 +41,5 @@ jobs:
           git config --global user.email "bot@noreply.github.com"
           git add price_history.json
           git commit -m "가격 정보 업데이트" || echo "변경 없음"
-          git pull --rebase
+          git pull
           git push
