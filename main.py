@@ -77,6 +77,29 @@ def create_driver():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    # Chrome 바이너리 경로 찾기 (GitHub Actions 대응)
+    import shutil
+    chrome_paths = [
+        "/usr/bin/chromium-browser",  # Ubuntu
+        "/usr/bin/chromium",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+    ]
+    
+    chrome_binary = None
+    for path in chrome_paths:
+        if os.path.exists(path):
+            chrome_binary = path
+            break
+    
+    if not chrome_binary:
+        chrome_binary = shutil.which("chromium-browser") or shutil.which("google-chrome")
+    
+    if chrome_binary:
+        options.binary_location = chrome_binary
+        print(f"Chrome 바이너리: {chrome_binary}")
+    
     return webdriver.Chrome(options=options)
 
 # --- [크롤링 함수] ---
