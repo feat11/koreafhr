@@ -12,29 +12,32 @@ jobs:
     
     permissions:
       contents: write
-
+    
     steps:
       - name: 코드 가져오기
         uses: actions/checkout@v4
-
+      
       - name: 파이썬 설치
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
-      - name: 크롬 브라우저 설치
-        uses: browser-actions/setup-chrome@v1
-
+      
+      - name: 크롬 및 ChromeDriver 설치
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+          chromium-browser --version
+          chromedriver --version
+      
       - name: 라이브러리 설치
         run: pip install -r requirements.txt
-
+      
       - name: 봇 실행하기
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          # ★중요★ 테스트를 위해 '채널ID' 자리에 '개인ID'를 넣었습니다!
           CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
         run: python main.py
-
+      
       - name: 가격 정보 저장
         run: |
           git config --global user.name "Hotel Bot"
