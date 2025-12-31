@@ -1,6 +1,7 @@
 """
-MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용 완전판 - 전체 리포트 전송 수정본)
+MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용 - 타임아웃 개선 버전)
 기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(상승/하락/동일), 역대 최저가 추적, 텔레그램 알림, 자동 저장
+수정: WebDriverWait 15초, 재시도 3회, 페이지 로딩 시간 증가
 """
 
 import asyncio
@@ -20,6 +21,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 # --- [설정] ---
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -66,156 +68,197 @@ def translate_promo(text):
     return text
 
 def create_driver():
-    """서버용 크롬 드라이버 생성"""
+    """서버용 크롬 드라이버 생성 (GitHub Actions 최적화)"""
     options = Options()
-    options.add_argument("--headless=new") # 화면 없이 실행
+    options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     return webdriver.Chrome(options=options)
 
 # --- [크롤링 함수] ---
 
-def fetch_maxfhr(driver):
-    """MaxFHR 사이트 크롤링"""
-    cities = ["Seoul", "Busan", "Jeju"]
-    all_hotels = []
+def fetch_maxfhr(driver, retry=3):
+    """MaxFHR 사이트 크롤링 (재시도 로직 추가)"""
     
-    try:
-        driver.get("https://maxfhr.com")
-        time.sleep(3)
-        
-        for idx, city in enumerate(cities):
-            print(f"[{idx+1}/3] MaxFHR: '{city}' 검색 중...")
-            if idx > 0: 
-                driver.get("https://maxfhr.com")
-                time.sleep(2)
+    for attempt in range(retry):
+        try:
+            cities = ["Seoul", "Busan", "Jeju"]
+            all_hotels = []
             
-            # 검색창 찾기
-            try:
-                inp = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Hotel'], input[placeholder*='Destination'], input.chakra-input"))
-                )
-                inp.clear()
-                inp.send_keys(city)
-                time.sleep(1)
-                inp.send_keys(Keys.RETURN)
-                time.sleep(5)
-            except:
-                print(f"  ❌ {city} 검색창 찾기 실패")
-                continue
+            print(f"MaxFHR 접속 시도 ({attempt+1}/{retry})...")
+            driver.get("https://maxfhr.com")
+            time.sleep(5)  # 3초 → 5초 증가
+            
+            for idx, city in enumerate(cities):
+                print(f"  [{idx+1}/3] '{city}' 검색 중...")
+                if idx > 0: 
+                    driver.get("https://maxfhr.com")
+                    time.sleep(3)  # 2초 → 3초 증가
+                
+                # 검색창 찾기 (타임아웃 15초)
+                try:
+                    inp = WebDriverWait(driver, 15).until(  # 5초 → 15초 증가
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Hotel'], input[placeholder*='Destination'], input.chakra-input"))
+                    )
+                    inp.clear()
+                    inp.send_keys(city)
+                    time.sleep(2)  # 1초 → 2초 증가
+                    inp.send_keys(Keys.RETURN)
+                    time.sleep(10)  # 5초 → 10초 증가 (가장 중요!)
+                except TimeoutException:
+                    print(f"    ⚠️ {city} 검색창 찾기 실패 (타임아웃)")
+                    continue
 
-            # 스크롤 및 데이터 수집
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+                # 스크롤 및 데이터 수집
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(4)  # 2초 → 4초 증가
+                
+                cards = driver.find_elements(By.CSS_SELECTOR, "div.chakra-card")
+                if not cards: 
+                    cards = driver.find_elements(By.TAG_NAME, "article")
+                
+                count = 0
+                for card in cards:
+                    try:
+                        text = card.text
+                        html = card.get_attribute('outerHTML').lower()
+                        
+                        # 호텔명 파싱
+                        lines = text.split('\n')
+                        if not lines: continue
+                        name = lines[0]
+                        
+                        if "thc" in html or "hotel collection" in html: 
+                            continue  # FHR만 수집
+                        
+                        # 가격 파싱
+                        price_match = re.search(r'\$(\d+)', text)
+                        if not price_match: continue
+                        price = int(price_match.group(1))
+                        
+                        # 날짜 파싱
+                        date_match = re.search(r'(\d+)/(\d+)/(\d+)', text)
+                        earliest = f"{date_match.group(3)}-{date_match.group(1).zfill(2)}-{date_match.group(2).zfill(2)}" if date_match else None
+                        
+                        # 링크
+                        try: 
+                            link = card.find_element(By.TAG_NAME, "a").get_attribute("href")
+                        except: 
+                            link = "https://maxfhr.com"
+
+                        # 중복 제거 및 추가
+                        norm_name = normalize_hotel_name(name)
+                        if not any(h['code'] == norm_name for h in all_hotels):
+                            all_hotels.append({
+                                "code": norm_name,
+                                "name": name,
+                                "price": price,
+                                "earliest": earliest,
+                                "url": link,
+                                "normalized_name": norm_name
+                            })
+                            count += 1
+                    except: 
+                        continue
+                        
+                print(f"    ✓ {count}개 호텔 발견")
             
-            cards = driver.find_elements(By.CSS_SELECTOR, "div.chakra-card")
-            if not cards: cards = driver.find_elements(By.TAG_NAME, "article")
+            # 성공 시 반환
+            if all_hotels:
+                print(f"✅ MaxFHR 수집 성공: {len(all_hotels)}개 호텔")
+                return all_hotels
+            else:
+                raise Exception("호텔 데이터 0개")
+                
+        except Exception as e:
+            if attempt < retry - 1:
+                print(f"⚠️ MaxFHR 재시도 중... ({attempt+1}/{retry}) - {e}")
+                time.sleep(10)  # 10초 대기 후 재시도
+                continue
+            else:
+                print(f"❌ MaxFHR 최종 실패: {e}")
+                return []
+    
+    return []
+
+def fetch_amex(driver, retry=3):
+    """AMEX 사이트 크롤링 (재시도 로직 추가)"""
+    
+    for attempt in range(retry):
+        try:
+            print(f"AMEX 접속 시도 ({attempt+1}/{retry})...")
+            driver.get(AMEX_LIST_URL)
+            time.sleep(8)  # 5초 → 8초 증가
             
-            count = 0
+            # 팝업 닫기 시도
+            try: 
+                webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+            except: 
+                pass
+            
+            # 스크롤
+            for _ in range(3):
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(3)  # 2초 → 3초 증가
+                
+            cards = driver.find_elements(By.CSS_SELECTOR, "div.card, div.hotel-card")
+            hotels = []
+            
             for card in cards:
                 try:
                     text = card.text
-                    html = card.get_attribute('outerHTML').lower()
+                    name = text.split('\n')[0]
+                    if not name: continue
                     
-                    # 호텔명 파싱
-                    lines = text.split('\n')
-                    if not lines: continue
-                    name = lines[0]
-                    
-                    if "thc" in html or "hotel collection" in html: continue # FHR만 수집
-                    
-                    # 가격 파싱
-                    price_match = re.search(r'\$(\d+)', text)
-                    if not price_match: continue
-                    price = int(price_match.group(1))
-                    
-                    # 날짜 파싱
-                    date_match = re.search(r'(\d+)/(\d+)/(\d+)', text)
-                    earliest = f"{date_match.group(3)}-{date_match.group(1).zfill(2)}-{date_match.group(2).zfill(2)}" if date_match else None
-                    
-                    # 링크
-                    try: link = card.find_element(By.TAG_NAME, "a").get_attribute("href")
-                    except: link = "https://maxfhr.com"
+                    promo = None
+                    if "Complimentary" in text or "% off" in text:
+                        promo = text.split('\n')[-1]
+                        if len(promo) > 50: 
+                            promo = "프로모션 있음"
 
-                    # 중복 제거 및 추가
-                    norm_name = normalize_hotel_name(name)
-                    if not any(h['code'] == norm_name for h in all_hotels):
-                        all_hotels.append({
-                            "code": norm_name,
-                            "name": name,
-                            "price": price,
-                            "earliest": earliest,
-                            "url": link,
-                            "normalized_name": norm_name
-                        })
-                        count += 1
-                except: continue
-            print(f"  -> {count}개 호텔 발견")
-            
-        return all_hotels
-    except Exception as e:
-        print(f"❌ MaxFHR 오류: {e}")
-        return []
-
-def fetch_amex(driver):
-    """AMEX 사이트 크롤링"""
-    hotels = []
-    try:
-        print("AMEX: 데이터 수집 중...")
-        driver.get(AMEX_LIST_URL)
-        time.sleep(5)
-        
-        # 팝업 닫기 시도
-        try: webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-        except: pass
-        
-        # 스크롤
-        for _ in range(3):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            
-        cards = driver.find_elements(By.CSS_SELECTOR, "div.card, div.hotel-card")
-        for card in cards:
-            try:
-                text = card.text
-                name = text.split('\n')[0]
-                if not name: continue
+                    hotels.append({
+                        "name": name,
+                        "promo": promo,
+                        "normalized_name": normalize_hotel_name(name)
+                    })
+                except: 
+                    continue
+                    
+            if hotels:
+                print(f"✅ AMEX 수집 성공: {len(hotels)}개 호텔")
+                return hotels
+            else:
+                raise Exception("호텔 데이터 0개")
                 
-                promo = None
-                if "Complimentary" in text or "% off" in text:
-                    promo = text.split('\n')[-1] # 대략적인 위치
-                    if len(promo) > 50: promo = "프로모션 있음" # 너무 길면 대체
-
-                hotels.append({
-                    "name": name,
-                    "promo": promo,
-                    "normalized_name": normalize_hotel_name(name)
-                })
-            except: continue
-        print(f"  -> {len(hotels)}개 AMEX 정보 발견")
-    except Exception as e:
-        print(f"⚠️ AMEX 접속 실패 (MaxFHR 데이터만 사용): {e}")
-    return hotels
+        except Exception as e:
+            if attempt < retry - 1:
+                print(f"⚠️ AMEX 재시도 중... ({attempt+1}/{retry}) - {e}")
+                time.sleep(10)
+                continue
+            else:
+                print(f"⚠️ AMEX 최종 실패 (MaxFHR만 사용): {e}")
+                return []
+    
+    return []
 
 def match_hotels(amex_list, maxfhr_list):
     """두 사이트 호텔 짝지기"""
     matched = []
-    # 1. MaxFHR 기준 순회
+    
     for mf in maxfhr_list:
         best_amex = None
         best_score = 0
         
-        # AMEX 리스트에서 가장 비슷한 이름 찾기
         for am in amex_list:
             score = SequenceMatcher(None, mf['normalized_name'], am['normalized_name']).ratio()
             if score > best_score:
                 best_score = score
                 best_amex = am
         
-        # 유사도가 높으면 매칭, 아니면 MaxFHR 정보만 사용
         if best_score > 0.6:
             matched.append({"maxfhr": mf, "amex": best_amex})
         else:
@@ -223,7 +266,7 @@ def match_hotels(amex_list, maxfhr_list):
             
     return matched
 
-# --- [메인 실행 로직 (이 부분이 수정됨!)] ---
+# --- [메인 실행 로직] ---
 
 async def run():
     token = os.getenv("TELEGRAM_TOKEN")
@@ -239,12 +282,17 @@ async def run():
     try:
         print("🚀 모니터링 시작...")
         
-        # 1. 데이터 수집
-        maxfhr_data = fetch_maxfhr(driver)
-        amex_data = fetch_amex(driver)
+        # 1. 데이터 수집 (재시도 3회)
+        maxfhr_data = fetch_maxfhr(driver, retry=3)
+        amex_data = fetch_amex(driver, retry=3)
         
         if not maxfhr_data:
             print("❌ 호텔 데이터를 하나도 못 가져왔습니다.")
+            await bot.send_message(
+                chat_id=chat_id,
+                text="❌ MaxFHR 접속 실패 (타임아웃)\n다음 실행 시 재시도됩니다.",
+                parse_mode="HTML"
+            )
             return
 
         # 2. 매칭
@@ -254,10 +302,10 @@ async def run():
         prev_history = load_price_history()
         new_history = {}
         
-        drop_msgs = []      # 하락
-        rise_msgs = []      # 상승
-        new_msgs = []       # 신규
-        same_msgs = []      # 변동 없음 (★ 추가됨)
+        drop_msgs = []
+        rise_msgs = []
+        new_msgs = []
+        same_msgs = []
         
         print("\n💰 가격 분석 중...")
         for item in final_list:
@@ -268,7 +316,6 @@ async def run():
             price = mf['price']
             name = am['name']
             
-            # 기록 확인
             old_price = 999999
             all_time_low = price
             
@@ -279,7 +326,6 @@ async def run():
                 old_price = old_data['price']
                 all_time_low = min(price, old_data.get('all_time_low', price))
             
-            # 히스토리 갱신용 데이터
             new_history[code] = {
                 "price": price,
                 "name": name,
@@ -287,29 +333,24 @@ async def run():
                 "updated": datetime.now().strftime("%Y-%m-%d")
             }
             
-            # 메시지 작성
             url_link = f"<a href='{mf['url']}'>{name}</a>"
             promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
             
-            # [케이스 1] 가격 하락
             if price < old_price:
                 icon = "🔥 역대최저!" if price <= all_time_low else "🔻"
                 msg = f"{icon} <b>{name}</b>\n💰 ${old_price} → <b>${price}</b>{date_txt}{promo_txt}"
                 drop_msgs.append(msg)
                 print(f"  하락: {name} (-${old_price - price})")
                 
-            # [케이스 2] 가격 상승
             elif price > old_price:
                 msg = f"🔺 <b>{name}</b>\n💰 ${old_price} → ${price}{date_txt}"
                 rise_msgs.append(msg)
                 
-            # [케이스 3] 신규 발견
             elif is_new:
                 msg = f"🆕 <b>{name}</b>\n💰 <b>${price}</b> 시작{date_txt}{promo_txt}"
                 new_msgs.append(msg)
 
-            # [케이스 4] 변동 없음 (★ 추가됨)
             else:
                 msg = f"🏨 <b>{name}</b>\n💰 <b>${price}</b>{date_txt}{promo_txt}"
                 same_msgs.append(msg)
@@ -317,10 +358,8 @@ async def run():
         # 4. 저장
         save_price_history(new_history)
         
-        # 5. 전송 (모든 상태 포함)
+        # 5. 전송
         messages = []
-        
-        # 헤더
         messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         
         if drop_msgs: 
@@ -332,11 +371,9 @@ async def run():
         if rise_msgs: 
             messages.append(f"\n<b>🔺 가격 상승 ({len(rise_msgs)}개)</b>\n" + "\n".join(rise_msgs))
 
-        # ★ 변동 없음도 무조건 전송
         if same_msgs:
             messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n" + "\n\n".join(same_msgs))
             
-        # 메시지 조합 및 전송
         final_msg = "\n" + "="*20 + "\n" + "".join(messages)
         
         if len(final_msg) > 4000:
@@ -360,7 +397,8 @@ async def run():
         print(f"❌ 오류 발생: {e}")
         logger.error(f"Error: {e}", exc_info=True)
     finally:
-        if driver: driver.quit()
+        if driver: 
+            driver.quit()
 
 if __name__ == "__main__":
     asyncio.run(run())
