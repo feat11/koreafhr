@@ -433,7 +433,7 @@ async def run():
             
             code = mf['code']
             price = mf['price']
-            name = am['name']
+            name = mf['name']  # MaxFHR 이름 사용 (더 정확함)
             
             old_price = 999999
             all_time_low = price
