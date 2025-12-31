@@ -336,6 +336,7 @@ async def run():
             new_history[code] = {
                 "price": price,
                 "name": name,
+                "earliest": mf.get('earliest'),  # 날짜 저장 추가
                 "all_time_low": all_time_low,
                 "updated": datetime.now().strftime("%Y-%m-%d")
             }
@@ -343,28 +344,38 @@ async def run():
             # 메시지 작성
             promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
-            credit_txt = f"\n💳 크레딧: ${mf.get('credit', 100)}" if mf.get('credit') else "\n💳 크레딧: $100"
+            credit_txt = f"\n💳 크레딧: ${mf.get('credit', 100)}"
+            
+            # 이전 날짜 가져오기
+            old_date_txt = ""
+            if not is_new and 'earliest' in prev_history[code]:
+                old_date = prev_history[code]['earliest']
+                if old_date:
+                    old_date_txt = f" ({old_date})"
             
             # 가격 하락
             if price < old_price:
-                icon = "🔥 역대최저!" if price <= all_time_low else "🔻"
-                msg = f"{icon} <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{credit_txt}{promo_txt}"
+                # 역대 최저가인 경우
+                if price <= all_time_low:
+                    msg = f"🔥 역대최저! <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}\n✨ <b>역대 최저가</b>{promo_txt}"
+                else:
+                    msg = f"🔻 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
                 drop_msgs.append(msg)
                 print(f"  하락: {name} (-${old_price - price})")
                 
             # 가격 상승
             elif price > old_price:
-                msg = f"🔺 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{credit_txt}"
+                msg = f"🔺 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{old_date_txt}{credit_txt}"
                 rise_msgs.append(msg)
                 
             # 신규 발견
             elif is_new:
-                msg = f"🆕 <b>{name}</b> ({mf['url']})\n💰 <b>${price}</b> 시작{date_txt}{credit_txt}{promo_txt}"
+                msg = f"🆕 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}{credit_txt}{promo_txt}"
                 new_msgs.append(msg)
 
             # 변동 없음
             else:
-                msg = f"🏨 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{credit_txt}{promo_txt}"
+                msg = f"🏨 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
                 same_msgs.append(msg)
 
         # 4. 저장
