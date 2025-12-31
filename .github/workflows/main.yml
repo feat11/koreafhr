@@ -26,8 +26,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
+          echo "=== Chrome 확인 ==="
+          which chromium-browser
           chromium-browser --version
+          echo "=== ChromeDriver 확인 ==="
+          which chromedriver
           chromedriver --version
+          echo "=== 경로 확인 ==="
+          ls -la /usr/bin/chromium* /usr/bin/chromedriver
       
       - name: 라이브러리 설치
         run: pip install -r requirements.txt
@@ -36,7 +42,13 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
-        run: python main.py
+        run: |
+          echo "=== Python 실행 시작 ==="
+          python --version
+          echo "=== main.py 존재 확인 ==="
+          ls -la main.py
+          echo "=== 실행 ==="
+          python main.py
       
       - name: 가격 정보 저장
         run: |
