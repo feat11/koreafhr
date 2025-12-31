@@ -41,7 +41,7 @@ jobs:
       - name: 봇 실행하기
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHANNEL_CHAT_ID: ${{ secrets.PERSONAL_CHAT_ID }}
+          CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
         run: |
           echo "=== Python 실행 시작 ==="
           python --version
