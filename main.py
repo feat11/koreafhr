@@ -144,6 +144,12 @@ def fetch_maxfhr(driver, retry=3):
                         date_match = re.search(r'(\d+)/(\d+)/(\d+)', text)
                         earliest = f"{date_match.group(3)}-{date_match.group(1).zfill(2)}-{date_match.group(2).zfill(2)}" if date_match else None
                         
+                        # 크레딧 파싱
+                        credit = None
+                        credit_match = re.search(r'USD\$(\d+)', text)
+                        if credit_match:
+                            credit = int(credit_match.group(1))
+                        
                         # 링크
                         try: 
                             link = card.find_element(By.TAG_NAME, "a").get_attribute("href")
@@ -158,6 +164,7 @@ def fetch_maxfhr(driver, retry=3):
                                 "name": name,
                                 "price": price,
                                 "earliest": earliest,
+                                "credit": credit,
                                 "url": link,
                                 "normalized_name": norm_name
                             })
@@ -333,26 +340,31 @@ async def run():
                 "updated": datetime.now().strftime("%Y-%m-%d")
             }
             
-            url_link = f"<a href='{mf['url']}'>{name}</a>"
+            # 메시지 작성
             promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
+            credit_txt = f"\n💳 크레딧: ${mf.get('credit', 100)}" if mf.get('credit') else "\n💳 크레딧: $100"
             
+            # 가격 하락
             if price < old_price:
                 icon = "🔥 역대최저!" if price <= all_time_low else "🔻"
-                msg = f"{icon} <b>{name}</b>\n💰 ${old_price} → <b>${price}</b>{date_txt}{promo_txt}"
+                msg = f"{icon} <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{credit_txt}{promo_txt}"
                 drop_msgs.append(msg)
                 print(f"  하락: {name} (-${old_price - price})")
                 
+            # 가격 상승
             elif price > old_price:
-                msg = f"🔺 <b>{name}</b>\n💰 ${old_price} → ${price}{date_txt}"
+                msg = f"🔺 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{credit_txt}"
                 rise_msgs.append(msg)
                 
+            # 신규 발견
             elif is_new:
-                msg = f"🆕 <b>{name}</b>\n💰 <b>${price}</b> 시작{date_txt}{promo_txt}"
+                msg = f"🆕 <b>{name}</b> ({mf['url']})\n💰 <b>${price}</b> 시작{date_txt}{credit_txt}{promo_txt}"
                 new_msgs.append(msg)
 
+            # 변동 없음
             else:
-                msg = f"🏨 <b>{name}</b>\n💰 <b>${price}</b>{date_txt}{promo_txt}"
+                msg = f"🏨 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{credit_txt}{promo_txt}"
                 same_msgs.append(msg)
 
         # 4. 저장
