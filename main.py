@@ -241,14 +241,32 @@ def fetch_amex(driver, retry=3):
             for card in cards:
                 try:
                     text = card.text
-                    name = text.split('\n')[0]
+                    lines = text.split('\n')
+                    if not lines: continue
+                    
+                    name = lines[0]
                     if not name: continue
                     
+                    # 프로모션 찾기 (개선)
                     promo = None
-                    if "Complimentary" in text or "% off" in text:
-                        promo = text.split('\n')[-1]
-                        if len(promo) > 50: 
-                            promo = "프로모션 있음"
+                    for line in lines:
+                        # 프로모션 키워드 체크
+                        if any(keyword in line for keyword in [
+                            "Complimentary third night",
+                            "Complimentary fourth night", 
+                            "% off",
+                            "Book by"
+                        ]):
+                            promo = line.strip()
+                            # 너무 길면 다음 줄도 포함
+                            idx = lines.index(line)
+                            if idx + 1 < len(lines) and "Book by" in line:
+                                promo = line + " " + lines[idx + 1]
+                            break
+                    
+                    # 디버깅
+                    if promo:
+                        print(f"  프로모션 발견: {name[:30]} - {promo[:50]}")
 
                     hotels.append({
                         "name": name,
@@ -380,25 +398,25 @@ async def run():
             if price < old_price:
                 # 역대 최저가인 경우
                 if price <= all_time_low:
-                    msg = f"🔥 역대최저! <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}\n✨ <b>역대 최저가</b>{promo_txt}"
+                    msg = f"🔥 역대최저! <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}\n✨ <b>역대 최저가</b>{promo_txt}"
                 else:
-                    msg = f"🔻 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                    msg = f"🔻 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
                 drop_msgs.append(msg)
                 print(f"  하락: {name} (-${old_price - price})")
                 
             # 가격 상승
             elif price > old_price:
-                msg = f"🔺 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{old_date_txt}{credit_txt}"
+                msg = f"🔺 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{old_date_txt}{credit_txt}"
                 rise_msgs.append(msg)
                 
             # 신규 발견
             elif is_new:
-                msg = f"🆕 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}{credit_txt}{promo_txt}"
+                msg = f"🆕 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}{credit_txt}{promo_txt}"
                 new_msgs.append(msg)
 
             # 변동 없음
             else:
-                msg = f"🏨 <b>{name}</b> ({mf['url']})\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                msg = f"🏨 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
                 same_msgs.append(msg)
 
         # 4. 저장
