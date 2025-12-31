@@ -15,14 +15,14 @@
   },
   "the shilla seoul": {
     "price": 277,
-    "name": "Lotte Hotel Seoul",
+    "name": "The Shilla Seoul",
     "earliest": "2026-01-13",
     "all_time_low": 276,
     "updated": "2025-12-31"
   },
   "signiel seoul": {
     "price": 296,
-    "name": "SIGNIEL BUSAN",
+    "name": "SIGNIEL SEOUL",
     "earliest": "2026-01-29",
     "all_time_low": 294,
     "updated": "2025-12-31"
@@ -42,14 +42,14 @@
     "updated": "2025-12-31"
   },
   "park hyatt seoul": {
-    "price": 349,
+    "price": 347,
     "name": "Park Hyatt Seoul",
     "earliest": "2026-01-19",
     "all_time_low": 345,
     "updated": "2025-12-31"
   },
   "four seasons hotel seoul": {
-    "price": 443,
+    "price": 444,
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2026-01-18",
     "all_time_low": 441,
@@ -65,12 +65,12 @@
   "signiel busan": {
     "price": 214,
     "name": "SIGNIEL BUSAN",
-    "earliest": "2026-01-05",
+    "earliest": "2026-10-21",
     "all_time_low": 213,
     "updated": "2025-12-31"
   },
   "jw marriott jeju resort spa": {
-    "price": 629,
+    "price": 624,
     "name": "JW Marriott Jeju Resort & Spa",
     "earliest": "2026-01-04",
     "all_time_low": 621,
