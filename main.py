@@ -438,7 +438,7 @@ async def run():
         if same_msgs:
             messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n" + "\n\n".join(same_msgs))
             
-        final_msg = "\n" + "="*20 + "\n" + "".join(messages)
+        final_msg = "".join(messages)
         
         if len(final_msg) > 4000:
             for i in range(0, len(final_msg), 4000):
