@@ -14,6 +14,13 @@ from pathlib import Path
 from datetime import datetime
 from difflib import SequenceMatcher
 
+# dotenv 로드 추가 (로컬용)
+try:
+    from dotenv import load_dotenv
+    load_dotenv("key.env")
+except:
+    pass  # GitHub Actions에서는 환경변수 직접 설정됨
+
 from telegram import Bot
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -59,13 +66,43 @@ def normalize_hotel_name(name):
     return re.sub(r'\s+', ' ', name).strip()
 
 def translate_promo(text):
-    """영어 프로모션 한글 번역"""
+    """영어 프로모션 한글 번역 (날짜 정보 포함)"""
     if not text: return ""
-    if "Complimentary third night" in text: return "3박 시 1박 무료"
-    if "Complimentary fourth night" in text: return "4박 시 1박 무료"
-    if "25% off" in text: return "25% 할인"
-    if "15% off" in text: return "15% 할인"
-    return text
+    
+    # .1, .2 같은 숫자 먼저 제거
+    text = re.sub(r'\.\d+', '', text)
+    
+    # 번역
+    translated = text
+    if "Complimentary third night" in text:
+        translated = text.replace("Complimentary third night", "3박 시 1박 무료")
+    elif "Complimentary fourth night" in text:
+        translated = text.replace("Complimentary fourth night", "4박 시 1박 무료")
+    elif "25% off" in text:
+        translated = "25% 할인"
+    elif "15% off" in text:
+        translated = "15% 할인"
+    
+    # 날짜 정보 한글화 (Book by ... for travel by ...)
+    match = re.search(r'Book by (\d{2}/\d{2}/\d{4}) for travel by (\d{2}/\d{2}/\d{4})', translated)
+    if match:
+        book_by = match.group(1)
+        travel_by = match.group(2)
+        
+        # MM/DD/YYYY → YYYY-MM-DD 변환
+        book_date = datetime.strptime(book_by, "%m/%d/%Y").strftime("%Y-%m-%d")
+        travel_date = datetime.strptime(travel_by, "%m/%d/%Y").strftime("%Y-%m-%d")
+        
+        # 날짜 정보 추가
+        date_info = f" (예약마감: {book_date}, 여행기간: ~{travel_date})"
+        
+        # "Book by..." 부분 제거하고 날짜 정보 추가
+        translated = re.sub(r'\s*Book by.*', date_info, translated)
+    
+    # 줄 바꿈 제거
+    translated = translated.replace('\n', ' ').strip()
+    
+    return translated
 
 def create_driver():
     """서버용 크롬 드라이버 생성 (GitHub Actions 최적화)"""
@@ -236,44 +273,78 @@ def fetch_amex(driver, retry=3):
                 time.sleep(3)  # 2초 → 3초 증가
                 
             cards = driver.find_elements(By.CSS_SELECTOR, "div.card, div.hotel-card")
+            print(f"  → {len(cards)}개 카드 발견")
             hotels = []
             
-            for card in cards:
+            for idx, card in enumerate(cards):
                 try:
                     text = card.text
-                    lines = text.split('\n')
+                    lines = [line.strip() for line in text.split('\n') if line.strip()]
                     if not lines: continue
                     
-                    name = lines[0]
-                    if not name: continue
+                    # 호텔명 찾기 (개선)
+                    name = None
+                    skip_keywords = [
+                        "FINE HOTELS",
+                        "THE HOTEL COLLECTION",
+                        "ANDAZ",
+                        "CONRAD HOTELS & RESORTS",
+                        "FAIRMONT",
+                        "FOUR SEASONS HOTELS AND RESORTS",
+                        "GRAND HYATT",
+                        "PARK HYATT",
+                        "LOTTE HOTELS & RESORTS",
+                        "LUXURY COLLECTION",
+                        "IHG",
+                        "MARRIOTT"
+                    ]
                     
-                    # 프로모션 찾기 (개선)
-                    promo = None
                     for line in lines:
-                        # 프로모션 키워드 체크
-                        if any(keyword in line for keyword in [
-                            "Complimentary third night",
-                            "Complimentary fourth night", 
-                            "% off",
-                            "Book by"
-                        ]):
-                            promo = line.strip()
-                            # 너무 길면 다음 줄도 포함
-                            idx = lines.index(line)
-                            if idx + 1 < len(lines) and "Book by" in line:
-                                promo = line + " " + lines[idx + 1]
+                        # 대문자 카테고리명 스킵
+                        if line.isupper() and any(skip in line for skip in skip_keywords):
+                            continue
+                        # 위치 정보 스킵
+                        if "South Korea" in line or line == "Korea":
+                            continue
+                        # 설명문 스킵
+                        if len(line) > 50:
+                            continue
+                        # 호텔명 찾음!
+                        if line and not line.startswith("Book") and not line.startswith("Complimentary"):
+                            name = line
                             break
                     
-                    # 디버깅
-                    if promo:
-                        print(f"  프로모션 발견: {name[:30]} - {promo[:50]}")
+                    if not name: continue
+                    
+                    # 프로모션 찾기 (날짜 정보 포함)
+                    promo_parts = []
+                    i = 0
+                    while i < len(lines):
+                        line = lines[i]
+                        # 프로모션 시작
+                        if any(keyword in line for keyword in [
+                            "Complimentary third night",
+                            "Complimentary fourth night",
+                            "% off",
+                            "Special Offer"
+                        ]):
+                            promo_parts.append(line)
+                            # 다음 줄도 프로모션 관련이면 추가
+                            if i + 1 < len(lines):
+                                next_line = lines[i + 1]
+                                if "Book by" in next_line or "for travel" in next_line:
+                                    promo_parts.append(next_line)
+                            break
+                        i += 1
+                    
+                    promo = " ".join(promo_parts) if promo_parts else None
 
                     hotels.append({
                         "name": name,
                         "promo": promo,
                         "normalized_name": normalize_hotel_name(name)
                     })
-                except: 
+                except Exception as e:
                     continue
                     
             if hotels:
@@ -424,7 +495,7 @@ async def run():
         
         # 5. 전송
         messages = []
-        messages.append(f"📅 <b>국내 FHR 호텔 가격 알림</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         
         if drop_msgs: 
             messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n" + "\n\n".join(drop_msgs))
@@ -466,4 +537,3 @@ async def run():
 
 if __name__ == "__main__":
     asyncio.run(run())
-
