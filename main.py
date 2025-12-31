@@ -424,7 +424,7 @@ async def run():
         
         # 5. 전송
         messages = []
-        messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        messages.append(f"📅 <b>국내 FHR 호텔 가격 알림</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         
         if drop_msgs: 
             messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n" + "\n\n".join(drop_msgs))
@@ -466,3 +466,4 @@ async def run():
 
 if __name__ == "__main__":
     asyncio.run(run())
+
