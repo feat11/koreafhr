@@ -44,7 +44,7 @@ jobs:
           CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
           PERSONAL_CHAT_ID: ${{ secrets.PERSONAL_CHAT_ID }}
           TARGET: ${{ github.event_name == 'schedule' && 'channel' || inputs.target }}
-        run: python main.py
+        run: python -u main.py
 
       - name: 가격 정보 저장
         if: always()
