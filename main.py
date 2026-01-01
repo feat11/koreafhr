@@ -104,6 +104,21 @@ def translate_promo(text):
     
     return translated
 
+def clean_text(s: str) -> str:
+    if not s:
+        return ""
+    s = s.replace("\r", "\n")
+    s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)
+    return s.strip()
+
+def clean_promo(s: str) -> str:
+    if not s:
+        return ""
+    s = re.sub(r"#+", "", s)
+    s = clean_text(s)
+    return s
+
 def create_driver():
     """서버용 크롬 드라이버 생성 (GitHub Actions 최적화)"""
     options = Options()
@@ -475,10 +490,15 @@ async def run():
             }
             
             # 메시지 작성
-            promo = am.get("promo") if isinstance(am, dict) else None
-            promo_txt = f"\n🎁 {translate_promo(promo)}" if promo else ""
-            date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
+            promo = am.get("promo")
+            promo_kr = translate_promo(promo) if promo else ""
+            promo_kr = clean_promo(promo_kr)
+            
+            date_txt = f" ({mf['earliest']})" if mf.get("earliest") else ""
             credit_txt = f"\n💳 크레딧: ${credit_display}"
+            
+            promo_txt = f"\n🎁 {promo_kr}" if promo_kr else ""
+
             
             # 이전 날짜 가져오기
             old_date_txt = ""
