@@ -427,14 +427,14 @@ async def run():
 
     bot = Bot(token=token)
     driver = create_driver()
-    
+
     try:
         print("🚀 모니터링 시작...")
-        
+
         # 1. 데이터 수집 (재시도 3회)
         maxfhr_data = fetch_maxfhr(driver, retry=3)
         amex_data = fetch_amex(driver, retry=3)
-        
+
         if not maxfhr_data:
             print("❌ 호텔 데이터를 하나도 못 가져왔습니다.")
             if target != "channel":
@@ -447,135 +447,143 @@ async def run():
 
         # 2. 매칭
         final_list = match_hotels(amex_data, maxfhr_data)
-        
+
         # 3. 가격 비교
         prev_history = load_price_history()
         new_history = {}
-        
+
         drop_msgs = []
         rise_msgs = []
         new_msgs = []
         same_msgs = []
-        
+
         print("\n💰 가격 분석 중...")
         for item in final_list:
-            mf = item['maxfhr']
-            am = item['amex']
-            
-            code = mf['code']
-            price = mf['price']
-            name = mf['name']  # MaxFHR 이름 사용 (더 정확함)
-            
+            mf = item["maxfhr"]
+            am = item["amex"]
+
+            code = mf["code"]
+            price = mf["price"]
+            name = mf["name"]  # MaxFHR 이름 사용
+
             old_price = 999999
             all_time_low = price
-            
+
             is_new = code not in prev_history
-            
+
             if not is_new:
                 old_data = prev_history[code]
-                old_price = old_data['price']
-                all_time_low = min(price, old_data.get('all_time_low', price))
+                old_price = old_data["price"]
+                all_time_low = min(price, old_data.get("all_time_low", price))
 
             credit_val = mf.get("credit")
             credit_display = credit_val if credit_val is not None else 100
-            
+
             new_history[code] = {
                 "price": price,
                 "name": name,
-                "earliest": mf.get('earliest'),  # 날짜 저장 추가
+                "earliest": mf.get("earliest"),
                 "all_time_low": all_time_low,
                 "updated": datetime.now().strftime("%Y-%m-%d"),
                 "credit": credit_display,
-                "credit_inferred": credit_val is None                
+                "credit_inferred": credit_val is None
             }
-            
+
             # 메시지 작성
             promo = am.get("promo")
             promo_kr = translate_promo(promo) if promo else ""
-            promo_kr = clean_promo(promo_kr)
-            
+            # clean_promo를 쓰고 있으면 유지(없으면 아래 2줄 삭제해도 됨)
+            promo_kr = clean_promo(promo_kr) if "clean_promo" in globals() else promo_kr
+
+            promo_txt = f"\n🎁 {promo_kr}" if promo_kr else ""
             date_txt = f" ({mf['earliest']})" if mf.get("earliest") else ""
             credit_txt = f"\n💳 크레딧: ${credit_display}"
-            
-            promo_txt = f"\n🎁 {promo_kr}" if promo_kr else ""
 
-            
-            # 이전 날짜 가져오기
+            # 이전 날짜 텍스트
             old_date_txt = ""
-            if not is_new and 'earliest' in prev_history[code]:
-                old_date = prev_history[code]['earliest']
+            if not is_new:
+                old_date = prev_history.get(code, {}).get("earliest")
                 if old_date:
                     old_date_txt = f" ({old_date})"
-            
+
             # 가격 하락
             if price < old_price:
-                # 역대 최저가인 경우
                 if price <= all_time_low:
-                    msg = f"🔥 역대최저! <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}\n✨ <b>역대 최저가</b>{promo_txt}"
+                    msg = (
+                        f"🔥 역대최저! <a href='{mf['url']}'>{name}</a>\n"
+                        f"💰 최저가: <b>${price}</b>{date_txt}\n"
+                        f"🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}\n"
+                        f"✨ <b>역대 최저가</b>{promo_txt}"
+                    )
                 else:
-                    msg = f"🔻 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                    msg = (
+                        f"🔻 <a href='{mf['url']}'>{name}</a>\n"
+                        f"💰 최저가: <b>${price}</b>{date_txt}\n"
+                        f"🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                    )
                 drop_msgs.append(msg)
                 print(f"  하락: {name} (-${old_price - price})")
-                
+
             # 가격 상승
             elif price > old_price:
-                msg = f"🔺 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔺 직전 최저가: ${old_price}{old_date_txt}{credit_txt}"
+                msg = (
+                    f"🔺 <a href='{mf['url']}'>{name}</a>\n"
+                    f"💰 최저가: <b>${price}</b>{date_txt}\n"
+                    f"🔺 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                )
                 rise_msgs.append(msg)
-                
+
             # 신규 발견
             elif is_new:
-                msg = f"🆕 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}{credit_txt}{promo_txt}"
+                msg = (
+                    f"🆕 <a href='{mf['url']}'>{name}</a>\n"
+                    f"💰 최저가: <b>${price}</b>{date_txt}{credit_txt}{promo_txt}"
+                )
                 new_msgs.append(msg)
 
             # 변동 없음
             else:
-                msg = f"🏨 <a href='{mf['url']}'>{name}</a>\n💰 최저가: <b>${price}</b>{date_txt}\n🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                msg = (
+                    f"🏨 <a href='{mf['url']}'>{name}</a>\n"
+                    f"💰 최저가: <b>${price}</b>{date_txt}\n"
+                    f"🔻 직전 최저가: ${old_price}{old_date_txt}{credit_txt}{promo_txt}"
+                )
                 same_msgs.append(msg)
 
         # 4. 저장
         save_price_history(new_history)
-        
-        # 5. 전송
-        messages = []
-        messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
-        
-        if drop_msgs: 
-            messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n\n" + "\n\n".join(drop_msgs))
-        
-        if new_msgs: 
-            messages.append(f"\n<b>🆕 신규 발견 ({len(new_msgs)}개)</b>\n\n" + "\n\n".join(new_msgs))
-            
-        if rise_msgs: 
-            messages.append(f"\n<b>🔺 가격 상승 ({len(rise_msgs)}개)</b>\n\n" + "\n\n".join(rise_msgs))
 
-        if same_msgs:
-            messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n\n" + "\n\n".join(same_msgs))
-            
-        final_msg = "".join(messages)
-        
+        # 5. 전송 (섹션 위/아래 1칸 고정)
+        header = f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        final_msg = (
+            header
+            + build_section("📉 가격 하락", drop_msgs)
+            + build_section("🆕 신규 발견", new_msgs)
+            + build_section("🔺 가격 상승", rise_msgs)
+            + build_section("📌 변동 없음", same_msgs)
+        ).rstrip()
+
         if len(final_msg) > 4000:
             for i in range(0, len(final_msg), 4000):
                 await bot.send_message(
-                    chat_id=chat_id, 
-                    text=final_msg[i:i+4000], 
-                    parse_mode="HTML", 
+                    chat_id=chat_id,
+                    text=final_msg[i:i+4000],
+                    parse_mode="HTML",
                     disable_web_page_preview=True
                 )
         else:
             await bot.send_message(
-                chat_id=chat_id, 
-                text=final_msg, 
-                parse_mode="HTML", 
+                chat_id=chat_id,
+                text=final_msg,
+                parse_mode="HTML",
                 disable_web_page_preview=True
             )
+
         print("✅ 전체 리포트 전송 완료")
 
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
         logger.error(f"Error: {e}", exc_info=True)
     finally:
-        if driver: 
+        if driver:
             driver.quit()
-
-if __name__ == "__main__":
-    asyncio.run(run())
