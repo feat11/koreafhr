@@ -57,17 +57,21 @@ jobs:
           # 파일 없으면 생성
           test -f price_history.json || echo '{}' > price_history.json
 
-          # ✅ 먼저 최신을 받아온 다음(변경 없을 때 pull 가능)
-          git pull --rebase
-
-          # ✅ 그 다음 변경된 파일을 add/commit/push
+          # 1) 변경분 스테이징
           git add price_history.json
 
+          # 2) 변경 없으면 종료
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0
           fi
 
+          # 3) 먼저 커밋해서 워킹트리 깨끗하게 만들기
           git commit -m "가격 정보 업데이트 $(date +'%Y-%m-%d %H:%M KST')"
+
+          # 4) 그 다음에 rebase pull (충돌/원격변경 대비)
+          git pull --rebase
+
+          # 5) push
           git push
 
