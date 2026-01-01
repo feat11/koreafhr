@@ -1,12 +1,12 @@
-name: 호텔 가격 알리미 (테스트)
+name: 호텔 가격 알리미
 
 on:
   schedule:
-    - cron: '0 23 * * *'
+    - cron: '0 23 * * *'  # 매일 오전 8시 (KST)
   workflow_dispatch:
     inputs:
       target:
-        description: "메시지 전송 대상 (personal=개인, channel=채널)"
+        description: "전송 대상 (personal/channel)"
         required: true
         default: "personal"
         type: choice
@@ -19,25 +19,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
+    
     steps:
       - name: 코드 가져오기
         uses: actions/checkout@v4
-
+      
       - name: 파이썬 설치
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
+      
       - name: 크롬 및 ChromeDriver 설치
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver || \
           sudo apt-get install -y chromium chromium-driver
-
+      
       - name: 라이브러리 설치
         run: pip install -r requirements.txt
-
+      
       - name: 봇 실행하기
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -45,7 +45,7 @@ jobs:
           PERSONAL_CHAT_ID: ${{ secrets.PERSONAL_CHAT_ID }}
           TARGET: ${{ github.event_name == 'schedule' && 'channel' || inputs.target }}
         run: python -u main.py
-
+      
       - name: 가격 정보 저장
         if: always()
         env:
@@ -53,25 +53,19 @@ jobs:
         run: |
           git config user.name "Hotel Bot"
           git config user.email "bot@noreply.github.com"
-
-          # 파일 없으면 생성
-          test -f price_history.json || echo '{}' > price_history.json
-
-          # 1) 변경분 스테이징
-          git add price_history.json
-
-          # 2) 변경 없으면 종료
+          
+          # data 폴더 생성
+          mkdir -p data
+          test -f data/price_history.json || echo '{}' > data/price_history.json
+          test -f data/price_log.jsonl || touch data/price_log.jsonl
+          
+          # 변경분 커밋
+          git add data/
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "변경사항 없음"
             exit 0
           fi
-
-          # 3) 먼저 커밋해서 워킹트리 깨끗하게 만들기
+          
           git commit -m "가격 정보 업데이트 $(date +'%Y-%m-%d %H:%M KST')"
-
-          # 4) 그 다음에 rebase pull (충돌/원격변경 대비)
           git pull --rebase
-
-          # 5) push
           git push
-
