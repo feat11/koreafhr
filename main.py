@@ -1,7 +1,7 @@
 """
-MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용 - 타임아웃 개선 버전)
-기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(상승/하락/동일), 역대 최저가 추적, 텔레그램 알림, 자동 저장
-수정: WebDriverWait 15초, 재시도 3회, 페이지 로딩 시간 증가
+MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용)
+기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(상승/하락/동일), 역대 최저가 추적, 텔레그램 알림, 가격 이력 누적
+수정: 전체 가격 이력 누적, Streamlit 대시보드 지원
 """
 
 import asyncio
@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from difflib import SequenceMatcher
+from storage import HotelStorage
 
 # dotenv 로드 추가 (로컬용)
 try:
@@ -34,27 +35,10 @@ from selenium.common.exceptions import TimeoutException
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
-PRICE_HISTORY_FILE = "price_history.json"
+PRICE_HISTORY_FILE = "data/price_history.json"
 AMEX_LIST_URL = "https://www.americanexpress.com/en-us/travel/discover/property-results/dt/2/d/South%20Korea?ref=search&intlink=US-travel-discover-subnavSearch-location-South%20Korea"
 
 # --- [유틸리티 함수] ---
-
-def load_price_history():
-    """저장된 가격 정보 불러오기"""
-    if Path(PRICE_HISTORY_FILE).exists():
-        try:
-            with open(PRICE_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except: return {}
-    return {}
-
-def save_price_history(history):
-    """가격 정보 저장하기"""
-    try:
-        with open(PRICE_HISTORY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(history, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        logger.error(f"저장 실패: {e}")
 
 def normalize_hotel_name(name):
     """호텔 이름 통일하기 (매칭 정확도 향상)"""
@@ -417,6 +401,9 @@ def build_section(title: str, items: list) -> str:
 
 
 async def run():
+    # Storage 초기화
+    storage = HotelStorage(base_dir="data")
+    
     token = os.getenv("TELEGRAM_TOKEN")
 
     channel_id = os.getenv("CHANNEL_CHAT_ID")
@@ -459,10 +446,11 @@ async def run():
         final_list = match_hotels(amex_data, maxfhr_data)
 
         # 3) 가격 비교
-        prev_history = load_price_history()
+        prev_history = storage.load_history()
         new_history = {}
 
         drop_msgs, rise_msgs, new_msgs, same_msgs = [], [], [], []
+        hotels_snapshot = []  # 이력용 스냅샷
 
         print("\n💰 가격 분석 중...")
         for item in final_list:
@@ -491,6 +479,15 @@ async def run():
                 "credit": credit_display,
                 "credit_inferred": credit_val is None,
             }
+            
+            # 이력 스냅샷 추가
+            hotels_snapshot.append({
+                "code": code,
+                "name": name,
+                "price": price,
+                "earliest": mf.get("earliest"),
+                "credit": credit_display,
+            })
 
             # 텍스트 조립
             promo = am.get("promo")
@@ -546,7 +543,8 @@ async def run():
                 same_msgs.append(msg)
 
         # 4) 저장
-        save_price_history(new_history)
+        storage.save_history(new_history)
+        storage.append_log(hotels_snapshot)
 
         # 5) 전송 (섹션 위/아래 1칸씩 고정)
         header = (
