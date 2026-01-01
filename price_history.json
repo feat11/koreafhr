@@ -3,7 +3,7 @@
     "price": 180,
     "name": "Grand Hyatt Seoul",
     "earliest": "2026-01-12",
-    "all_time_low": 179,
+    "all_time_low": 180,
     "updated": "2025-12-31"
   },
   "fairmont ambassador seoul": {
@@ -17,63 +17,63 @@
     "price": 277,
     "name": "The Shilla Seoul",
     "earliest": "2026-01-13",
-    "all_time_low": 276,
+    "all_time_low": 277,
     "updated": "2025-12-31"
   },
   "signiel seoul": {
     "price": 296,
     "name": "SIGNIEL SEOUL",
     "earliest": "2026-01-29",
-    "all_time_low": 294,
+    "all_time_low": 296,
     "updated": "2025-12-31"
   },
   "grand intercontinental seoul parnas": {
     "price": 304,
     "name": "Grand InterContinental Seoul Parnas",
     "earliest": "2026-01-19",
-    "all_time_low": 303,
+    "all_time_low": 304,
     "updated": "2025-12-31"
   },
   "conrad seoul": {
     "price": 311,
     "name": "Conrad Seoul",
     "earliest": "2026-01-07",
-    "all_time_low": 310,
+    "all_time_low": 311,
     "updated": "2025-12-31"
   },
   "park hyatt seoul": {
-    "price": 347,
+    "price": 349,
     "name": "Park Hyatt Seoul",
     "earliest": "2026-01-19",
-    "all_time_low": 345,
+    "all_time_low": 349,
     "updated": "2025-12-31"
   },
   "four seasons hotel seoul": {
-    "price": 444,
+    "price": 443,
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2026-01-18",
-    "all_time_low": 441,
+    "all_time_low": 443,
     "updated": "2025-12-31"
   },
   "paradise hotel busan": {
     "price": 166,
     "name": "Paradise Hotel Busan",
     "earliest": "2026-01-12",
-    "all_time_low": 165,
+    "all_time_low": 166,
     "updated": "2025-12-31"
   },
   "signiel busan": {
     "price": 214,
     "name": "SIGNIEL BUSAN",
-    "earliest": "2026-10-21",
-    "all_time_low": 213,
+    "earliest": "2026-01-05",
+    "all_time_low": 214,
     "updated": "2025-12-31"
   },
   "jw marriott jeju resort spa": {
-    "price": 624,
+    "price": 629,
     "name": "JW Marriott Jeju Resort & Spa",
     "earliest": "2026-01-04",
-    "all_time_low": 621,
+    "all_time_low": 629,
     "updated": "2025-12-31"
   }
 }
