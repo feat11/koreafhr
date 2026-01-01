@@ -1,5 +1,5 @@
 """
-한국 FHR 호텔 가격 대시보드 - 개선 버전
+한국 FHR 호텔 가격 대시보드 - 개선 버전 (그리드 레이아웃)
 """
 
 import streamlit as st
@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# CSS - 눈에 잘 보이게
+# CSS - 그리드 레이아웃
 st.markdown("""
 <style>
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
@@ -29,30 +29,40 @@ h1 {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 900;
-    font-size: 3rem !important;
-    margin-bottom: 30px !important;
+    font-size: 2.5rem !important;
+    margin-bottom: 20px !important;
 }
 
 h2 {
-    font-size: 1.8rem !important;
+    font-size: 1.6rem !important;
     font-weight: 700;
     color: #fff;
-    margin-top: 30px !important;
+    margin-top: 20px !important;
 }
 
 h3 {
-    font-size: 1.4rem !important;
+    font-size: 1.3rem !important;
     font-weight: 600;
 }
 
-/* 호텔 카드 - 크고 명확하게 */
+/* 호텔 그리드 컨테이너 */
+.hotel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+/* 호텔 카드 - 컴팩트하게 */
 .hotel-card {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
     border: 2px solid rgba(102, 126, 234, 0.3);
     border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 16px;
+    padding: 20px;
     transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .hotel-card:hover {
@@ -62,16 +72,16 @@ h3 {
 }
 
 .hotel-name {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: #fff;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .price-big {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 900;
-    margin: 16px 0;
+    margin: 12px 0;
 }
 
 .price-down { color: #ff6b6b; }
@@ -82,32 +92,32 @@ h3 {
 .info-badge {
     display: inline-block;
     background: rgba(255, 255, 255, 0.1);
-    padding: 6px 14px;
-    border-radius: 20px;
-    margin-right: 10px;
-    font-size: 0.95rem;
-    margin-top: 8px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-right: 6px;
+    font-size: 0.85rem;
+    margin-top: 6px;
 }
 
 .lowest-badge {
     background: linear-gradient(90deg, #ff6b6b 0%, #ff4757 100%);
     color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 6px 12px;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.9rem;
     display: inline-block;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 /* 메트릭 카드 */
 [data-testid="stMetricValue"] {
-    font-size: 2.5rem !important;
+    font-size: 2rem !important;
     font-weight: 900 !important;
 }
 
 [data-testid="stMetricLabel"] {
-    font-size: 1.1rem !important;
+    font-size: 1rem !important;
     font-weight: 600 !important;
 }
 
@@ -117,18 +127,14 @@ h3 {
 }
 
 .stTabs [data-baseweb="tab"] {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    padding: 12px 24px;
+    padding: 10px 20px;
 }
 
 /* 사이드바 */
 section[data-testid="stSidebar"] > div {
     padding-top: 2rem;
-}
-
-.sidebar .element-container {
-    margin-bottom: 1.5rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -150,7 +156,7 @@ if not history:
     st.warning("⚠️ 데이터가 없습니다.")
     st.stop()
 
-# 전체 통계 (큰 숫자로)
+# 전체 통계 (컴팩트하게)
 st.markdown("### 📊 전체 현황")
 col1, col2, col3, col4 = st.columns(4)
 
@@ -168,19 +174,19 @@ hotels_df = pd.DataFrame([
 ])
 
 with col1:
-    st.metric("📍 총 호텔", f"{len(hotels_df)}개", delta=None)
+    st.metric("📍 총 호텔", f"{len(hotels_df)}개")
 
 with col2:
     avg_price = hotels_df["price"].mean()
-    st.metric("💵 평균 가격", f"${avg_price:.0f}")
+    st.metric("💵 평균", f"${avg_price:.0f}")
 
 with col3:
     lowest_count = sum(hotels_df["is_lowest"])
-    st.metric("🔥 역대최저", f"{lowest_count}개", delta=f"+{lowest_count}")
+    st.metric("🔥 최저", f"{lowest_count}개")
 
 with col4:
     min_price = hotels_df["price"].min()
-    st.metric("💎 최저가격", f"${min_price}")
+    st.metric("💎 최소", f"${min_price}")
 
 st.markdown("---")
 
@@ -250,25 +256,29 @@ with tab1:
     if len(filtered_df) == 0:
         st.info("🔍 필터 조건에 맞는 호텔이 없습니다.")
     else:
-        # 호텔 카드
+        # 호텔 카드 - 그리드로 출력
+        cards_html = '<div class="hotel-grid">'
+        
         for _, hotel in filtered_df.iterrows():
             is_lowest = hotel["is_lowest"]
-            
-            # 가격 변동 색상
             price_class = "price-lowest" if is_lowest else "price-same"
             icon = "🔥" if is_lowest else "🏨"
+            lowest_badge = f'<div class="lowest-badge">✨ 역대 최저가!</div>' if is_lowest else ''
             
-            st.markdown(f"""
+            cards_html += f"""
             <div class="hotel-card">
                 <div class="hotel-name">{icon} {hotel['name']}</div>
                 <div class="price-big {price_class}">${hotel['price']}</div>
                 <div>
                     <span class="info-badge">📅 {hotel['earliest'] if hotel['earliest'] else '날짜 미정'}</span>
-                    <span class="info-badge">💳 크레딧 ${hotel['credit']}</span>
+                    <span class="info-badge">💳 ${hotel['credit']}</span>
                 </div>
-                {f'<div class="lowest-badge">✨ 역대 최저가!</div>' if is_lowest else ''}
+                {lowest_badge}
             </div>
-            """, unsafe_allow_html=True)
+            """
+        
+        cards_html += '</div>'
+        st.markdown(cards_html, unsafe_allow_html=True)
 
 with tab2:
     st.subheader("📈 가격 추이 분석")
@@ -281,7 +291,11 @@ with tab2:
         # 호텔 선택
         with col1:
             hotel_names = sorted([info["name"] for info in history.values()])
-            selected_hotel = st.selectbox("🏨 호텔 선택", hotel_names, key="chart_hotel")
+            selected_hotel = st.selectbox(
+                "🏨 호텔 선택", 
+                hotel_names, 
+                key="price_chart_hotel"
+            )
         
         # 기간 선택
         with col2:
@@ -294,7 +308,12 @@ with tab2:
                 "최근 1년": 365,
                 "📊 전체 기간": None
             }
-            selected_period = st.selectbox("기간", list(period_options.keys()), index=2)
+            selected_period = st.selectbox(
+                "기간", 
+                list(period_options.keys()), 
+                index=2,
+                key="price_chart_period"
+            )
             period_days = period_options[selected_period]
         
         # 해당 호텔의 code 찾기
@@ -366,11 +385,11 @@ with tab2:
                 fig.update_layout(
                     title={
                         'text': f"{selected_hotel} - {period_text}",
-                        'font': {'size': 24, 'color': '#fff', 'family': 'Pretendard'}
+                        'font': {'size': 22, 'color': '#fff', 'family': 'Pretendard'}
                     },
                     xaxis_title="날짜",
                     yaxis_title="가격 ($)",
-                    height=550,
+                    height=500,
                     template="plotly_dark",
                     hovermode="x unified",
                     plot_bgcolor='rgba(0,0,0,0)',
@@ -384,16 +403,16 @@ with tab2:
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("현재 가격", f"${prices[-1]}")
+                    st.metric("현재", f"${prices[-1]}")
                 
                 with col2:
-                    st.metric("평균 가격", f"${avg_price:.0f}")
+                    st.metric("평균", f"${avg_price:.0f}")
                 
                 with col3:
-                    st.metric("최저 가격", f"${min(prices)}")
+                    st.metric("최저", f"${min(prices)}")
                 
                 with col4:
-                    st.metric("최고 가격", f"${max(prices)}")
+                    st.metric("최고", f"${max(prices)}")
                 
                 # 가격 변동
                 if len(prices) > 1:
