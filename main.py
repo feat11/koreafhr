@@ -460,20 +460,25 @@ async def run():
                 old_data = prev_history[code]
                 old_price = old_data['price']
                 all_time_low = min(price, old_data.get('all_time_low', price))
+
+            credit_val = mf.get("credit")
+            credit_display = credit_val if credit_val is not None else 100
             
             new_history[code] = {
                 "price": price,
                 "name": name,
                 "earliest": mf.get('earliest'),  # 날짜 저장 추가
                 "all_time_low": all_time_low,
-                "updated": datetime.now().strftime("%Y-%m-%d")
+                "updated": datetime.now().strftime("%Y-%m-%d"),
+                "credit": credit_display,
+                "credit_inferred": credit_val is None                
             }
             
             # 메시지 작성
+            promo = am.get("promo")
             promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
-            credit_val = mf.get("credit")  # 파싱 성공하면 숫자, 실패하면 None
-            credit_txt = f"\n💳 크레딧: ${credit_val if credit_val is not None else 100}"
+            credit_txt = f"\n💳 크레딧: ${credit_display}"
             
             # 이전 날짜 가져오기
             old_date_txt = ""
