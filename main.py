@@ -422,11 +422,12 @@ async def run():
         
         if not maxfhr_data:
             print("❌ 호텔 데이터를 하나도 못 가져왔습니다.")
-            await bot.send_message(
-                chat_id=chat_id,
-                text="❌ MaxFHR 접속 실패 (타임아웃)\n다음 실행 시 재시도됩니다.",
-                parse_mode="HTML"
-            )
+            if target != "channel":
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text="❌ MaxFHR 접속 실패 (타임아웃)\n다음 실행 시 재시도됩니다.",
+                    parse_mode="HTML"
+                )
             return
 
         # 2. 매칭
