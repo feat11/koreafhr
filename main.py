@@ -475,8 +475,8 @@ async def run():
             }
             
             # 메시지 작성
-            promo = am.get("promo")
-            promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
+            promo = am.get("promo") if isinstance(am, dict) else None
+            promo_txt = f"\n🎁 {translate_promo(promo)}" if promo else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
             credit_txt = f"\n💳 크레딧: ${credit_display}"
             
