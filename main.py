@@ -498,16 +498,16 @@ async def run():
         messages.append(f"📅 <b>한국 FHR 호텔 가격 정보</b>\n업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         
         if drop_msgs: 
-            messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n" + "\n\n".join(drop_msgs))
+            messages.append(f"\n<b>📉 가격 하락 ({len(drop_msgs)}개)</b>\n\n" + "\n\n".join(drop_msgs))
         
         if new_msgs: 
-            messages.append(f"\n<b>🆕 신규 발견 ({len(new_msgs)}개)</b>\n" + "\n".join(new_msgs))
+            messages.append(f"\n<b>🆕 신규 발견 ({len(new_msgs)}개)</b>\n\n" + "\n\n".join(new_msgs))
             
         if rise_msgs: 
-            messages.append(f"\n<b>🔺 가격 상승 ({len(rise_msgs)}개)</b>\n" + "\n".join(rise_msgs))
+            messages.append(f"\n<b>🔺 가격 상승 ({len(rise_msgs)}개)</b>\n\n" + "\n\n".join(rise_msgs))
 
         if same_msgs:
-            messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n" + "\n\n".join(same_msgs))
+            messages.append(f"\n<b>📌 변동 없음 ({len(same_msgs)}개)</b>\n\n" + "\n\n".join(same_msgs))
             
         final_msg = "".join(messages)
         
