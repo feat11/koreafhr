@@ -389,10 +389,25 @@ def match_hotels(amex_list, maxfhr_list):
 
 async def run():
     token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("CHANNEL_CHAT_ID") or os.getenv("PERSONAL_CHAT_ID")
-    
-    if not token or not chat_id:
-        print("❌ 토큰 오류: Secrets 설정을 확인하세요.")
+
+    # Secrets에서 둘 다 받아둠
+    channel_id = os.getenv("CHANNEL_CHAT_ID")
+    personal_id = os.getenv("PERSONAL_CHAT_ID")
+
+    # yml에서 넘겨주는 값: schedule이면 channel, 수동이면 personal(기본)
+    target = (os.getenv("TARGET") or "personal").strip().lower()
+
+    if not token:
+        print("❌ TELEGRAM_TOKEN 없음: Secrets 설정을 확인하세요.")
+        return
+
+    if target == "channel":
+        chat_id = channel_id
+    else:
+        chat_id = personal_id
+
+    if not chat_id:
+        print(f"❌ chat_id 없음 (TARGET={target}). Secrets 설정을 확인하세요.")
         return
 
     bot = Bot(token=token)
