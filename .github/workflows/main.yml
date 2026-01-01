@@ -53,12 +53,21 @@ jobs:
         run: |
           git config user.name "Hotel Bot"
           git config user.email "bot@noreply.github.com"
+
+          # 파일 없으면 생성
           test -f price_history.json || echo '{}' > price_history.json
+
+          # ✅ 먼저 최신을 받아온 다음(변경 없을 때 pull 가능)
           git pull --rebase
+
+          # ✅ 그 다음 변경된 파일을 add/commit/push
           git add price_history.json
+
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0
           fi
+
           git commit -m "가격 정보 업데이트 $(date +'%Y-%m-%d %H:%M KST')"
           git push
+
