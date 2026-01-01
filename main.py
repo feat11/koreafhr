@@ -472,7 +472,8 @@ async def run():
             # 메시지 작성
             promo_txt = f"\n🎁 {translate_promo(am['promo'])}" if am['promo'] else ""
             date_txt = f" ({mf['earliest']})" if mf['earliest'] else ""
-            credit_txt = f"\n💳 크레딧: ${mf.get('credit', 100)}"
+            credit_val = mf.get("credit")  # 파싱 성공하면 숫자, 실패하면 None
+            credit_txt = f"\n💳 크레딧: ${credit_val if credit_val is not None else 100}"
             
             # 이전 날짜 가져오기
             old_date_txt = ""
