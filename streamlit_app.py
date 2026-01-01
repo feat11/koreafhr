@@ -45,15 +45,7 @@ h3 {
     font-weight: 600;
 }
 
-/* 호텔 그리드 컨테이너 */
-.hotel-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-}
-
-/* 호텔 카드 - 컴팩트하게 */
+/* 호텔 카드 */
 .hotel-card {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
     border: 2px solid rgba(102, 126, 234, 0.3);
@@ -61,8 +53,6 @@ h3 {
     padding: 20px;
     transition: all 0.3s ease;
     height: 100%;
-    display: flex;
-    flex-direction: column;
 }
 
 .hotel-card:hover {
@@ -256,29 +246,32 @@ with tab1:
     if len(filtered_df) == 0:
         st.info("🔍 필터 조건에 맞는 호텔이 없습니다.")
     else:
-        # 호텔 카드 - 그리드로 출력
-        cards_html = '<div class="hotel-grid">'
+        # 3열 그리드로 호텔 카드 표시
+        hotels_list = filtered_df.to_dict('records')
         
-        for _, hotel in filtered_df.iterrows():
-            is_lowest = hotel["is_lowest"]
-            price_class = "price-lowest" if is_lowest else "price-same"
-            icon = "🔥" if is_lowest else "🏨"
-            lowest_badge = f'<div class="lowest-badge">✨ 역대 최저가!</div>' if is_lowest else ''
+        # 3개씩 묶어서 row 생성
+        for i in range(0, len(hotels_list), 3):
+            cols = st.columns(3)
             
-            cards_html += f"""
-            <div class="hotel-card">
-                <div class="hotel-name">{icon} {hotel['name']}</div>
-                <div class="price-big {price_class}">${hotel['price']}</div>
-                <div>
-                    <span class="info-badge">📅 {hotel['earliest'] if hotel['earliest'] else '날짜 미정'}</span>
-                    <span class="info-badge">💳 ${hotel['credit']}</span>
-                </div>
-                {lowest_badge}
-            </div>
-            """
-        
-        cards_html += '</div>'
-        st.markdown(cards_html, unsafe_allow_html=True)
+            for j, col in enumerate(cols):
+                if i + j < len(hotels_list):
+                    hotel = hotels_list[i + j]
+                    is_lowest = hotel["is_lowest"]
+                    price_class = "price-lowest" if is_lowest else "price-same"
+                    icon = "🔥" if is_lowest else "🏨"
+                    
+                    with col:
+                        st.markdown(f"""
+                        <div class="hotel-card">
+                            <div class="hotel-name">{icon} {hotel['name']}</div>
+                            <div class="price-big {price_class}">${hotel['price']}</div>
+                            <div>
+                                <span class="info-badge">📅 {hotel['earliest'] if hotel['earliest'] else '날짜 미정'}</span>
+                                <span class="info-badge">💳 ${hotel['credit']}</span>
+                            </div>
+                            {f'<div class="lowest-badge">✨ 역대 최저가!</div>' if is_lowest else ''}
+                        </div>
+                        """, unsafe_allow_html=True)
 
 with tab2:
     st.subheader("📈 가격 추이 분석")
