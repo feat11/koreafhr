@@ -20,7 +20,7 @@
   "the shilla seoul": {
     "price": 276,
     "name": "The Shilla Seoul",
-    "earliest": "2026-01-13",
+    "earliest": "2026-02-04",
     "all_time_low": 276,
     "updated": "2026-01-02",
     "credit": 100,
@@ -47,7 +47,7 @@
   "conrad seoul": {
     "price": 311,
     "name": "Conrad Seoul",
-    "earliest": "2026-01-07",
+    "earliest": "2026-01-05",
     "all_time_low": 311,
     "updated": "2026-01-02",
     "credit": 100,
@@ -56,7 +56,7 @@
   "park hyatt seoul": {
     "price": 346,
     "name": "Park Hyatt Seoul",
-    "earliest": "2026-01-19",
+    "earliest": "2026-01-20",
     "all_time_low": 346,
     "updated": "2026-01-02",
     "credit": 100,
@@ -65,7 +65,7 @@
   "four seasons hotel seoul": {
     "price": 442,
     "name": "Four Seasons Hotel Seoul",
-    "earliest": "2026-01-15",
+    "earliest": "2026-01-18",
     "all_time_low": 442,
     "updated": "2026-01-02",
     "credit": 100,
