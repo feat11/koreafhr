@@ -30,6 +30,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.page_load_strategy import PageLoadStrategy
 
 # --- [설정] ---
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -114,6 +115,15 @@ def create_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
+    # [핵심 1] 페이지 로딩 전략 'eager' - DOM만 로드되면 진행
+    options.page_load_strategy = 'eager'
+    
+    # [핵심 2] 이미지 로딩 차단 - 메모리 및 네트워크 절약
+    options.add_experimental_option("prefs", {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.default_content_setting_values.notifications": 2,
+    })
+    
     # Chrome 바이너리 경로 찾기 (GitHub Actions 대응)
     import shutil
     chrome_paths = [
@@ -136,12 +146,17 @@ def create_driver():
         options.binary_location = chrome_binary
         print(f"Chrome 바이너리: {chrome_binary}")
     
-    return webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(options=options)
+    
+    # [핵심 3] 페이지 로드 타임아웃 설정
+    driver.set_page_load_timeout(60)
+    
+    return driver
 
 # --- [크롤링 함수] ---
 
 def fetch_maxfhr(driver, retry=3):
-    """MaxFHR 사이트 크롤링 (재시도 로직 추가, 타임아웃 증가)"""
+    """MaxFHR 사이트 크롤링 (타임아웃 방어 로직)"""
     
     for attempt in range(retry):
         try:
@@ -149,33 +164,58 @@ def fetch_maxfhr(driver, retry=3):
             all_hotels = []
             
             print(f"MaxFHR 접속 시도 ({attempt+1}/{retry})...")
-            driver.get("https://maxfhr.com")
-            time.sleep(8)  # 5초 → 8초 증가
+            
+            # 메인 페이지 접속 (타임아웃 방어)
+            try:
+                driver.get("https://maxfhr.com")
+            except TimeoutException:
+                print("  ⚠️ 메인 페이지 로딩 지연 (진행 계속)")
+                driver.execute_script("window.stop();")
+            
+            time.sleep(5)
             
             for idx, city in enumerate(cities):
                 print(f"  [{idx+1}/3] '{city}' 검색 중...")
                 if idx > 0: 
-                    driver.get("https://maxfhr.com")
-                    time.sleep(3)  # 2초 → 3초 증가
+                    try:
+                        driver.get("https://maxfhr.com")
+                        time.sleep(3)
+                    except:
+                        pass
                 
-                # 검색창 찾기 (타임아웃 30초)
+                # 검색창 찾기
                 try:
-                    inp = WebDriverWait(driver, 30).until(  # 15초 → 30초 증가
+                    inp = WebDriverWait(driver, 20).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Hotel'], input[placeholder*='Destination'], input.chakra-input"))
                     )
                     inp.clear()
                     inp.send_keys(city)
-                    time.sleep(2)  # 1초 → 2초 증가
-                    inp.send_keys(Keys.RETURN)
-                    time.sleep(10)  # 5초 → 10초 증가 (가장 중요!)
+                    time.sleep(1)
+                    
+                    # [핵심] 엔터 키 예외 처리
+                    try:
+                        inp.send_keys(Keys.RETURN)
+                    except Exception:
+                        print("  ⚠️ 엔터 키 입력 중 지연 (무시하고 진행)")
+                        pass
+                        
+                    time.sleep(8)
+
                 except TimeoutException:
                     print(f"    ⚠️ {city} 검색창 찾기 실패 (타임아웃)")
                     continue
+                except Exception as e:
+                    print(f"    ⚠️ {city} 검색 중 오류: {e}")
+                    continue
 
-                # 스크롤 및 데이터 수집
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(4)  # 2초 → 4초 증가
+                # 스크롤
+                try:
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    time.sleep(3)
+                except:
+                    pass
                 
+                # 데이터 수집
                 cards = driver.find_elements(By.CSS_SELECTOR, "div.chakra-card")
                 if not cards: 
                     cards = driver.find_elements(By.TAG_NAME, "article")
@@ -186,13 +226,12 @@ def fetch_maxfhr(driver, retry=3):
                         text = card.text
                         html = card.get_attribute('outerHTML').lower()
                         
-                        # 호텔명 파싱
                         lines = text.split('\n')
                         if not lines: continue
                         name = lines[0]
                         
                         if "thc" in html or "hotel collection" in html: 
-                            continue  # FHR만 수집
+                            continue
                         
                         # 가격 파싱
                         price_match = re.search(r'\$(\d+)', text)
@@ -243,7 +282,7 @@ def fetch_maxfhr(driver, retry=3):
         except Exception as e:
             if attempt < retry - 1:
                 print(f"⚠️ MaxFHR 재시도 중... ({attempt+1}/{retry}) - {e}")
-                time.sleep(15)  # 10초 → 15초 대기 후 재시도
+                time.sleep(10)
                 continue
             else:
                 print(f"❌ MaxFHR 최종 실패: {e}")
