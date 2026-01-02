@@ -1,7 +1,7 @@
 """
 MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용)
 기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(상승/하락/동일), 역대 최저가 추적, 텔레그램 알림, 가격 이력 누적
-수정: 전체 가격 이력 누적, Streamlit 대시보드 지원
+수정: 전체 가격 이력 누적, Streamlit 대시보드 지원, 타임아웃 증가
 """
 
 import asyncio
@@ -141,7 +141,7 @@ def create_driver():
 # --- [크롤링 함수] ---
 
 def fetch_maxfhr(driver, retry=3):
-    """MaxFHR 사이트 크롤링 (재시도 로직 추가)"""
+    """MaxFHR 사이트 크롤링 (재시도 로직 추가, 타임아웃 증가)"""
     
     for attempt in range(retry):
         try:
@@ -150,7 +150,7 @@ def fetch_maxfhr(driver, retry=3):
             
             print(f"MaxFHR 접속 시도 ({attempt+1}/{retry})...")
             driver.get("https://maxfhr.com")
-            time.sleep(5)  # 3초 → 5초 증가
+            time.sleep(8)  # 5초 → 8초 증가
             
             for idx, city in enumerate(cities):
                 print(f"  [{idx+1}/3] '{city}' 검색 중...")
@@ -158,9 +158,9 @@ def fetch_maxfhr(driver, retry=3):
                     driver.get("https://maxfhr.com")
                     time.sleep(3)  # 2초 → 3초 증가
                 
-                # 검색창 찾기 (타임아웃 15초)
+                # 검색창 찾기 (타임아웃 30초)
                 try:
-                    inp = WebDriverWait(driver, 15).until(  # 5초 → 15초 증가
+                    inp = WebDriverWait(driver, 30).until(  # 15초 → 30초 증가
                         EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Hotel'], input[placeholder*='Destination'], input.chakra-input"))
                     )
                     inp.clear()
@@ -243,7 +243,7 @@ def fetch_maxfhr(driver, retry=3):
         except Exception as e:
             if attempt < retry - 1:
                 print(f"⚠️ MaxFHR 재시도 중... ({attempt+1}/{retry}) - {e}")
-                time.sleep(10)  # 10초 대기 후 재시도
+                time.sleep(15)  # 10초 → 15초 대기 후 재시도
                 continue
             else:
                 print(f"❌ MaxFHR 최종 실패: {e}")
