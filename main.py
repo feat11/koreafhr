@@ -30,7 +30,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.page_load_strategy import PageLoadStrategy
 
 # --- [설정] ---
 logging.basicConfig(level=logging.INFO, format='%(message)s')
