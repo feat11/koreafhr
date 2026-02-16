@@ -3,7 +3,6 @@
 - price_history.json: 현재 가격
 - price_log.jsonl: 일별 이력 (JSONL 형식)
 """
-
 import json
 from pathlib import Path
 from datetime import datetime
@@ -80,11 +79,45 @@ class HotelStorage:
             print(f"⚠️ 로그 로드 실패: {e}")
             return []
         
-        # days 지정 시에만 필터링
         if days is not None:
             logs = logs[-days:]
         
         return logs
+    
+    def get_all_time_low(self, hotel_code: str, exclude_date: str = None) -> Optional[Dict]:
+        """
+        특정 호텔의 역대 최저가 조회 (특정 날짜 제외)
+        
+        price_log.jsonl의 전체 이력에서 가장 낮은 가격과 해당 날짜를 반환.
+        
+        Args:
+            hotel_code: 호텔 코드 (normalized name)
+            exclude_date: 제외할 날짜 (예: 오늘 "2026-02-16")
+        
+        Returns:
+            {"price": 280, "date": "2026-01-15", "earliest": "2026-03-01"} or None
+        """
+        logs = self.load_logs()
+        best = None
+        
+        for log in logs:
+            log_date = log.get("date")
+            if exclude_date and log_date == exclude_date:
+                continue
+            
+            for hotel in log.get("hotels", []):
+                if hotel.get("code") == hotel_code:
+                    p = hotel.get("price")
+                    if p is not None:
+                        if best is None or p < best["price"]:
+                            best = {
+                                "price": p,
+                                "date": log_date,
+                                "earliest": hotel.get("earliest"),
+                            }
+                    break  # 같은 날짜에 같은 호텔은 1개
+        
+        return best
     
     def get_price_history_for_hotel(self, hotel_code: str, days: Optional[int] = None) -> List[Dict]:
         """
@@ -96,7 +129,7 @@ class HotelStorage:
         Returns:
             [{"date": "2026-01-01", "price": 311, "earliest": "..."}, ...]
         """
-        logs = self.load_logs(days=None)  # 일단 전체 로드
+        logs = self.load_logs(days=None)
         history = []
         
         for log in logs:
@@ -110,7 +143,6 @@ class HotelStorage:
                     })
                     break
         
-        # days 지정 시에만 필터링
         if days is not None and len(history) > days:
             history = history[-days:]
         
