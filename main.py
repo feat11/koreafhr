@@ -500,14 +500,22 @@ async def run():
                 )
                 same_msgs.append(msg)
 
-        # 4) 저장
-        storage.append_log(hotels_snapshot)
-        storage.save_history(new_history)
+        # 4) 저장 (merge 방식 + partial 마킹)
+        storage.append_log(hotels_snapshot, prev_count=len(prev_history))
+        storage.save_history(new_data=new_history, prev_data=prev_history)
 
         # 5) 전송
+        partial_warning = ""
+        if len(prev_history) > 0 and len(new_history) < len(prev_history) * 0.5:
+            partial_warning = (
+                f"\n⚠️ <i>스크래핑 부분 실패: {len(new_history)}개만 수집"
+                f" (정상: {len(prev_history)}개). 이전 데이터 유지됨.</i>"
+            )
+
         header = (
             f"📅 <b>한국 FHR 호텔 가격 정보</b>\n"
             f"업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            f"{partial_warning}"
         )
 
         final_msg = (
@@ -520,10 +528,23 @@ async def run():
         ).rstrip()
 
         if len(final_msg) > 4000:
-            for i in range(0, len(final_msg), 4000):
+            # 호텔 단위로 분할 (\n\n 기준) → HTML 태그 중간 절단 방지
+            chunks = []
+            current = ""
+            for part in final_msg.split("\n\n"):
+                if len(current) + len(part) + 2 > 4000:
+                    if current:
+                        chunks.append(current.rstrip())
+                    current = part
+                else:
+                    current = current + "\n\n" + part if current else part
+            if current:
+                chunks.append(current.rstrip())
+
+            for chunk in chunks:
                 await bot.send_message(
                     chat_id=chat_id,
-                    text=final_msg[i:i + 4000],
+                    text=chunk,
                     parse_mode="HTML",
                     disable_web_page_preview=True,
                 )
