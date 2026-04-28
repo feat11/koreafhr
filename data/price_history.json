@@ -4,61 +4,61 @@
     "name": "Grand Hyatt Seoul",
     "earliest": "2027-02-01",
     "all_time_low": 141,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
   "the shilla seoul": {
-    "price": 270,
+    "price": 271,
     "name": "The Shilla Seoul",
     "earliest": "2027-01-04",
     "all_time_low": 263,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
   "fairmont ambassador seoul": {
-    "price": 293,
+    "price": 294,
     "name": "Fairmont Ambassador Seoul",
     "earliest": "2027-01-21",
     "all_time_low": 242,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
   "signiel seoul": {
-    "price": 338,
+    "price": 339,
     "name": "SIGNIEL SEOUL",
     "earliest": "2027-01-05",
     "all_time_low": 256,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
   "conrad seoul": {
-    "price": 331,
+    "price": 332,
     "name": "Conrad Seoul",
     "earliest": "2026-07-16",
     "all_time_low": 280,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
   "grand intercontinental seoul parnas": {
-    "price": 331,
+    "price": 332,
     "name": "Grand InterContinental Seoul Parnas",
     "earliest": "2026-07-26",
     "all_time_low": 256,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 125,
     "credit_inferred": false
   },
   "park hyatt seoul": {
-    "price": 406,
+    "price": 366,
     "name": "Park Hyatt Seoul",
     "earliest": "2026-07-19",
     "all_time_low": 285,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
@@ -67,7 +67,7 @@
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2026-08-23",
     "all_time_low": 432,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   },
@@ -103,7 +103,16 @@
     "name": "Ajman Saray, a Luxury Collection Resort, Ajman",
     "earliest": "2026-05-01",
     "all_time_low": 99,
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
+    "credit": 100,
+    "credit_inferred": false
+  },
+  "al habtoor palace": {
+    "price": 91,
+    "name": "Al Habtoor Palace",
+    "earliest": "2026-04-28",
+    "all_time_low": 91,
+    "updated": "2026-04-28",
     "credit": 100,
     "credit_inferred": false
   }
