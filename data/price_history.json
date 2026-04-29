@@ -63,7 +63,7 @@
     "credit_inferred": false
   },
   "four seasons hotel seoul": {
-    "price": 473,
+    "price": 475,
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2026-08-23",
     "all_time_low": 432,
@@ -81,7 +81,7 @@
     "credit_inferred": false
   },
   "signiel busan": {
-    "price": 216,
+    "price": 217,
     "name": "SIGNIEL BUSAN",
     "earliest": "2026-09-01",
     "all_time_low": 195,
@@ -90,7 +90,7 @@
     "credit_inferred": false
   },
   "jw marriott jeju resort spa": {
-    "price": 745,
+    "price": 746,
     "name": "JW Marriott Jeju Resort & Spa",
     "earliest": "2026-05-06",
     "all_time_low": 607,
