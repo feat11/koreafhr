@@ -97,23 +97,5 @@
     "updated": "2026-04-26",
     "credit": 100,
     "credit_inferred": false
-  },
-  "ajman saray a luxury collection resort ajman": {
-    "price": 99,
-    "name": "Ajman Saray, a Luxury Collection Resort, Ajman",
-    "earliest": "2026-05-01",
-    "all_time_low": 99,
-    "updated": "2026-04-28",
-    "credit": 100,
-    "credit_inferred": false
-  },
-  "al habtoor palace": {
-    "price": 91,
-    "name": "Al Habtoor Palace",
-    "earliest": "2026-04-28",
-    "all_time_low": 91,
-    "updated": "2026-04-28",
-    "credit": 100,
-    "credit_inferred": false
   }
 }

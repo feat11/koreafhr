@@ -35,6 +35,25 @@ logger = logging.getLogger(__name__)
 
 PRICE_HISTORY_FILE = "data/price_history.json"
 AMEX_LIST_URL = "https://www.americanexpress.com/en-us/travel/discover/property-results/dt/2/d/South%20Korea?ref=search&intlink=US-travel-discover-subnavSearch-location-South%20Korea"
+KOREA_LOCATION_KEYWORDS = (
+    " seoul",
+    " busan",
+    " jeju",
+    " incheon",
+)
+KNOWN_KOREA_HOTEL_CODES = {
+    "conrad seoul",
+    "fairmont ambassador seoul",
+    "four seasons hotel seoul",
+    "grand hyatt seoul",
+    "grand intercontinental seoul parnas",
+    "jw marriott jeju resort spa",
+    "paradise hotel busan",
+    "park hyatt seoul",
+    "signiel busan",
+    "signiel seoul",
+    "the shilla seoul",
+}
 
 # --- [유틸리티 함수] ---
 
@@ -45,6 +64,15 @@ def normalize_hotel_name(name):
     name = re.sub(r',\s*a\s*luxury\s*collection\s*hotel', '', name)
     name = re.sub(r'[^a-z0-9\s]', '', name)
     return re.sub(r'\s+', ' ', name).strip()
+
+def is_korea_hotel(name: str, normalized_name: str | None = None) -> bool:
+    norm_name = normalized_name or normalize_hotel_name(name)
+    if not norm_name:
+        return False
+    if norm_name in KNOWN_KOREA_HOTEL_CODES:
+        return True
+    padded = f" {norm_name} "
+    return any(keyword in padded for keyword in KOREA_LOCATION_KEYWORDS)
 
 def translate_promo(text):
     if not text: return ""
@@ -186,6 +214,9 @@ def fetch_maxfhr(driver, retry=3):
                         except:
                             link = "https://maxfhr.com"
                         norm_name = normalize_hotel_name(name)
+                        if not is_korea_hotel(name, norm_name):
+                            print(f"    - skip non-Korea MaxFHR result: {name}")
+                            continue
                         if not any(h['code'] == norm_name for h in all_hotels):
                             all_hotels.append({
                                 "code": norm_name,
@@ -271,10 +302,14 @@ def fetch_amex(driver, retry=3):
                             break
                         i += 1
                     promo = " ".join(promo_parts) if promo_parts else None
+                    norm_name = normalize_hotel_name(name)
+                    if not is_korea_hotel(name, norm_name):
+                        print(f"  - skip non-Korea AMEX result: {name}")
+                        continue
                     hotels.append({
                         "name": name,
                         "promo": promo,
-                        "normalized_name": normalize_hotel_name(name)
+                        "normalized_name": norm_name
                     })
                 except Exception as e:
                     continue
@@ -364,6 +399,16 @@ async def run():
         prev_history = storage.load_history()  # 어제 가격
         today_str = datetime.now().strftime("%Y-%m-%d")
         new_history = {}
+        prev_history_raw = prev_history
+        prev_history = {
+            code: hotel
+            for code, hotel in prev_history_raw.items()
+            if is_korea_hotel(hotel.get("name", ""), code)
+        }
+        removed_prev_codes = sorted(set(prev_history_raw) - set(prev_history))
+        if removed_prev_codes:
+            print(f"Removed non-Korea hotels from history: {', '.join(removed_prev_codes)}")
+        today_str = datetime.now().strftime("%Y-%m-%d")
 
         alltime_msgs = []   # 🔥 역대최저 갱신
         drop_msgs = []      # 📉 어제 대비 하락
