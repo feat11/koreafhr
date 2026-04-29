@@ -398,8 +398,7 @@ async def run():
         #    - 추가 표시: 역대최저 대비
         prev_history = storage.load_history()  # 어제 가격
         today_str = datetime.now().strftime("%Y-%m-%d")
-        new_history = {}
-        prev_history_raw = prev_history
+        prev_history_raw = storage.load_history()
         prev_history = {
             code: hotel
             for code, hotel in prev_history_raw.items()
@@ -409,6 +408,7 @@ async def run():
         if removed_prev_codes:
             print(f"Removed non-Korea hotels from history: {', '.join(removed_prev_codes)}")
         today_str = datetime.now().strftime("%Y-%m-%d")
+        new_history = {}
 
         alltime_msgs = []   # 🔥 역대최저 갱신
         drop_msgs = []      # 📉 어제 대비 하락
