@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 PRICE_HISTORY_FILE = "data/price_history.json"
 AMEX_LIST_URL = "https://www.americanexpress.com/en-us/travel/discover/property-results/dt/2/d/South%20Korea?ref=search&intlink=US-travel-discover-subnavSearch-location-South%20Korea"
+MAXFHR_KOREA_URL = "https://maxfhr.com/?programs=FHR&q=South+Korea&search_type=COUNTRY"
 KOREA_LOCATION_KEYWORDS = (
     " seoul",
     " busan",
@@ -217,6 +218,96 @@ def fetch_maxfhr_hotel_detail(driver, hotel_code: str, hotel_meta: dict) -> Opti
     except Exception as e:
         print(f"    - fallback failed for {hotel_meta['name']}: {e}")
         return None
+
+def fetch_maxfhr_country(driver, retry=3):
+    for attempt in range(retry):
+        try:
+            all_hotels = []
+            print(f"MaxFHR country attempt ({attempt+1}/{retry})...")
+            try:
+                driver.get(MAXFHR_KOREA_URL)
+            except TimeoutException:
+                print("  - MaxFHR Korea page load timeout, continuing")
+                driver.execute_script("window.stop();")
+            time.sleep(5)
+
+            try:
+                for _ in range(4):
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    time.sleep(2)
+            except Exception:
+                pass
+
+            cards = driver.find_elements(By.CSS_SELECTOR, "div.chakra-card")
+            if not cards:
+                cards = driver.find_elements(By.TAG_NAME, "article")
+
+            count = 0
+            for card in cards:
+                try:
+                    text = card.text
+                    html = card.get_attribute("outerHTML").lower()
+                    lines = text.split("\n")
+                    if not lines:
+                        continue
+                    name = lines[0]
+                    if "thc" in html or "hotel collection" in html:
+                        continue
+                    price_match = re.search(r"\$(\d+)", text)
+                    if not price_match:
+                        continue
+                    price = int(price_match.group(1))
+                    date_match = re.search(r"(\d+)/(\d+)/(\d+)", text)
+                    earliest = f"{date_match.group(3)}-{date_match.group(1).zfill(2)}-{date_match.group(2).zfill(2)}" if date_match else None
+                    credit = None
+                    credit_match = re.search(r"USD\$(\d+)", text)
+                    if credit_match:
+                        credit = int(credit_match.group(1))
+                    try:
+                        link = card.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    except Exception:
+                        link = "https://maxfhr.com"
+                    norm_name = normalize_hotel_name(name)
+                    if not is_korea_hotel(name, norm_name):
+                        print(f"    - skip non-Korea MaxFHR result: {name}")
+                        continue
+                    if not any(h["code"] == norm_name for h in all_hotels):
+                        all_hotels.append({
+                            "code": norm_name,
+                            "name": name,
+                            "price": price,
+                            "earliest": earliest,
+                            "credit": credit,
+                            "url": link,
+                            "normalized_name": norm_name,
+                        })
+                        count += 1
+                except Exception:
+                    continue
+
+            print(f"  - MaxFHR Korea page hotels found: {count}")
+
+            existing_codes = {hotel["code"] for hotel in all_hotels}
+            missing_codes = [code for code in KNOWN_KOREA_HOTEL_CODES if code not in existing_codes]
+            if missing_codes:
+                print(f"  - fallback check for missing Korea hotels: {len(missing_codes)}")
+            for code in missing_codes:
+                hotel = fetch_maxfhr_hotel_detail(driver, code, KNOWN_KOREA_HOTELS[code])
+                if hotel:
+                    all_hotels.append(hotel)
+
+            if all_hotels:
+                print(f"MaxFHR country success: {len(all_hotels)} hotels")
+                return all_hotels
+            raise Exception("hotel data empty")
+        except Exception as e:
+            if attempt < retry - 1:
+                print(f"MaxFHR country retrying ({attempt+1}/{retry}) - {e}")
+                time.sleep(10)
+                continue
+            print(f"MaxFHR country final failure: {e}")
+            return []
+    return []
 
 # --- [크롤링 함수] ---
 
@@ -462,7 +553,7 @@ async def run():
         print("🚀 모니터링 시작...")
 
         # 1) 데이터 수집
-        maxfhr_data = fetch_maxfhr(driver, retry=3)
+        maxfhr_data = fetch_maxfhr_country(driver, retry=3)
         amex_data = fetch_amex(driver, retry=3)
 
         if not maxfhr_data:
