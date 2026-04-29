@@ -55,6 +55,52 @@ KNOWN_KOREA_HOTEL_CODES = {
     "signiel seoul",
     "the shilla seoul",
 }
+KNOWN_KOREA_HOTELS = {
+    "grand hyatt seoul": {
+        "name": "Grand Hyatt Seoul",
+        "url": "https://maxfhr.com/hotel/21727",
+    },
+    "the shilla seoul": {
+        "name": "The Shilla Seoul",
+        "url": "https://maxfhr.com/hotel/15031",
+    },
+    "fairmont ambassador seoul": {
+        "name": "Fairmont Ambassador Seoul",
+        "url": "https://maxfhr.com/hotel/59921264",
+    },
+    "conrad seoul": {
+        "name": "Conrad Seoul",
+        "url": "https://maxfhr.com/hotel/5389047",
+    },
+    "grand intercontinental seoul parnas": {
+        "name": "Grand InterContinental Seoul Parnas",
+        "url": "https://maxfhr.com/hotel/22529",
+    },
+    "signiel seoul": {
+        "name": "SIGNIEL SEOUL",
+        "url": "https://maxfhr.com/hotel/18060379",
+    },
+    "park hyatt seoul": {
+        "name": "Park Hyatt Seoul",
+        "url": "https://maxfhr.com/hotel/1200015",
+    },
+    "four seasons hotel seoul": {
+        "name": "Four Seasons Hotel Seoul",
+        "url": "https://maxfhr.com/hotel/11918302",
+    },
+    "paradise hotel busan": {
+        "name": "Paradise Hotel Busan",
+        "url": "https://maxfhr.com/hotel/793876",
+    },
+    "signiel busan": {
+        "name": "SIGNIEL BUSAN",
+        "url": "https://maxfhr.com/hotel/49243871",
+    },
+    "jw marriott jeju resort spa": {
+        "name": "JW Marriott Jeju Resort & Spa",
+        "url": "https://maxfhr.com/hotel/92451076",
+    },
+}
 
 # --- [유틸리티 함수] ---
 
@@ -141,6 +187,36 @@ def create_driver():
     driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(60)
     return driver
+
+def fetch_maxfhr_hotel_detail(driver, hotel_code: str, hotel_meta: dict) -> Optional[dict]:
+    try:
+        driver.get(hotel_meta["url"])
+        time.sleep(4)
+        text = driver.find_element(By.TAG_NAME, "body").text
+        price_match = re.search(r'\$(\d+)', text)
+        if not price_match:
+            print(f"    - fallback missing price: {hotel_meta['name']}")
+            return None
+        price = int(price_match.group(1))
+        date_match = re.search(r'(\d+)/(\d+)/(\d+)', text)
+        earliest = (
+            f"{date_match.group(3)}-{date_match.group(1).zfill(2)}-{date_match.group(2).zfill(2)}"
+            if date_match else None
+        )
+        credit_match = re.search(r'USD\$(\d+)', text)
+        credit = int(credit_match.group(1)) if credit_match else None
+        return {
+            "code": hotel_code,
+            "name": hotel_meta["name"],
+            "price": price,
+            "earliest": earliest,
+            "credit": credit,
+            "url": hotel_meta["url"],
+            "normalized_name": hotel_code,
+        }
+    except Exception as e:
+        print(f"    - fallback failed for {hotel_meta['name']}: {e}")
+        return None
 
 # --- [크롤링 함수] ---
 
@@ -232,6 +308,14 @@ def fetch_maxfhr(driver, retry=3):
                     except:
                         continue
                 print(f"    ✓ {count}개 호텔 발견")
+            existing_codes = {hotel["code"] for hotel in all_hotels}
+            missing_codes = [code for code in KNOWN_KOREA_HOTEL_CODES if code not in existing_codes]
+            if missing_codes:
+                print(f"  - fallback check for missing Korea hotels: {len(missing_codes)}")
+            for code in missing_codes:
+                hotel = fetch_maxfhr_hotel_detail(driver, code, KNOWN_KOREA_HOTELS[code])
+                if hotel:
+                    all_hotels.append(hotel)
             if all_hotels:
                 print(f"✅ MaxFHR 수집 성공: {len(all_hotels)}개 호텔")
                 return all_hotels
