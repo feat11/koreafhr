@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from difflib import SequenceMatcher
+from typing import Optional
 from storage import HotelStorage
 
 try:
@@ -65,7 +66,7 @@ def normalize_hotel_name(name):
     name = re.sub(r'[^a-z0-9\s]', '', name)
     return re.sub(r'\s+', ' ', name).strip()
 
-def is_korea_hotel(name: str, normalized_name: str | None = None) -> bool:
+def is_korea_hotel(name: str, normalized_name: Optional[str] = None) -> bool:
     norm_name = normalized_name or normalize_hotel_name(name)
     if not norm_name:
         return False
