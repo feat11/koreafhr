@@ -9,7 +9,7 @@
     "credit_inferred": false
   },
   "the shilla seoul": {
-    "price": 264,
+    "price": 263,
     "name": "The Shilla Seoul",
     "earliest": "2027-01-04",
     "all_time_low": 263,
@@ -20,14 +20,14 @@
   "fairmont ambassador seoul": {
     "price": 296,
     "name": "Fairmont Ambassador Seoul",
-    "earliest": "2027-01-10",
+    "earliest": "2026-07-01",
     "all_time_low": 242,
     "updated": "2026-05-23",
     "credit": 100,
     "credit_inferred": false
   },
   "signiel seoul": {
-    "price": 331,
+    "price": 329,
     "name": "SIGNIEL SEOUL",
     "earliest": "2027-01-05",
     "all_time_low": 256,
@@ -36,7 +36,7 @@
     "credit_inferred": false
   },
   "conrad seoul": {
-    "price": 327,
+    "price": 325,
     "name": "Conrad Seoul",
     "earliest": "2026-12-01",
     "all_time_low": 280,
@@ -45,7 +45,7 @@
     "credit_inferred": false
   },
   "grand intercontinental seoul parnas": {
-    "price": 297,
+    "price": 296,
     "name": "Grand InterContinental Seoul Parnas",
     "earliest": "2026-06-21",
     "all_time_low": 256,
@@ -54,7 +54,7 @@
     "credit_inferred": false
   },
   "park hyatt seoul": {
-    "price": 357,
+    "price": 355,
     "name": "Park Hyatt Seoul",
     "earliest": "2026-08-16",
     "all_time_low": 285,
@@ -63,7 +63,7 @@
     "credit_inferred": false
   },
   "four seasons hotel seoul": {
-    "price": 450,
+    "price": 447,
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2026-08-23",
     "all_time_low": 432,
@@ -72,7 +72,7 @@
     "credit_inferred": false
   },
   "paradise hotel busan": {
-    "price": 158,
+    "price": 157,
     "name": "Paradise Hotel Busan",
     "earliest": "2026-09-01",
     "all_time_low": 157,
@@ -81,7 +81,7 @@
     "credit_inferred": false
   },
   "signiel busan": {
-    "price": 211,
+    "price": 210,
     "name": "SIGNIEL BUSAN",
     "earliest": "2026-12-01",
     "all_time_low": 195,
@@ -90,7 +90,7 @@
     "credit_inferred": false
   },
   "jw marriott jeju resort spa": {
-    "price": 728,
+    "price": 723,
     "name": "JW Marriott Jeju Resort & Spa",
     "earliest": "2026-05-26",
     "all_time_low": 607,
