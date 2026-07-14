@@ -1,100 +1,100 @@
 {
   "grand hyatt seoul": {
-    "price": 152,
+    "price": 144,
     "name": "Grand Hyatt Seoul",
     "earliest": "2027-01-18",
     "all_time_low": 137,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "the shilla seoul": {
-    "price": 266,
+    "price": 267,
     "name": "The Shilla Seoul",
     "earliest": "2027-01-04",
     "all_time_low": 256,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "fairmont ambassador seoul": {
-    "price": 340,
+    "price": 343,
     "name": "Fairmont Ambassador Seoul",
     "earliest": "2027-01-25",
     "all_time_low": 242,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "signiel seoul": {
-    "price": 346,
+    "price": 347,
     "name": "SIGNIEL SEOUL",
     "earliest": "2027-01-05",
     "all_time_low": 256,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "conrad seoul": {
-    "price": 336,
+    "price": 337,
     "name": "Conrad Seoul",
     "earliest": "2027-01-04",
     "all_time_low": 280,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "grand intercontinental seoul parnas": {
-    "price": 326,
+    "price": 327,
     "name": "Grand InterContinental Seoul Parnas",
     "earliest": "2027-01-10",
     "all_time_low": 256,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "park hyatt seoul": {
-    "price": 332,
+    "price": 349,
     "name": "Park Hyatt Seoul",
-    "earliest": "2026-08-03",
+    "earliest": "2027-01-05",
     "all_time_low": 281,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "four seasons hotel seoul": {
-    "price": 493,
+    "price": 494,
     "name": "Four Seasons Hotel Seoul",
     "earliest": "2027-01-08",
     "all_time_low": 432,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "paradise hotel busan": {
     "price": 160,
     "name": "Paradise Hotel Busan",
-    "earliest": "2026-09-10",
+    "earliest": "2026-10-27",
     "all_time_low": 153,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "signiel busan": {
-    "price": 206,
+    "price": 207,
     "name": "SIGNIEL BUSAN",
     "earliest": "2026-12-01",
     "all_time_low": 195,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   },
   "jw marriott jeju resort spa": {
-    "price": 733,
+    "price": 734,
     "name": "JW Marriott Jeju Resort & Spa",
     "earliest": "2026-10-25",
     "all_time_low": 607,
-    "updated": "2026-07-13",
+    "updated": "2026-07-14",
     "credit": 100,
     "credit_inferred": true
   }
