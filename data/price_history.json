@@ -1,10 +1,10 @@
 {
   "grand hyatt seoul": {
-    "price": 193,
+    "price": 194,
     "name": "Grand Hyatt Seoul",
     "earliest": "2027-01-24",
     "all_time_low": 137,
-    "updated": "2026-10-18",
+    "updated": "2026-10-19",
     "credit": 100,
     "credit_inferred": true
   },
@@ -18,11 +18,11 @@
     "credit_inferred": true
   },
   "fairmont ambassador seoul": {
-    "price": 379,
+    "price": 381,
     "name": "Fairmont Ambassador Seoul",
     "earliest": "2027-01-05",
     "all_time_low": 242,
-    "updated": "2026-10-18",
+    "updated": "2026-10-19",
     "credit": 100,
     "credit_inferred": true
   },
@@ -81,11 +81,11 @@
     "credit_inferred": true
   },
   "signiel busan": {
-    "price": 230,
+    "price": 232,
     "name": "SIGNIEL BUSAN",
     "earliest": "2026-12-01",
     "all_time_low": 194,
-    "updated": "2026-10-18",
+    "updated": "2026-10-19",
     "credit": 100,
     "credit_inferred": true
   },
