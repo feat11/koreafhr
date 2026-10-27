@@ -16,7 +16,8 @@ on:
 
 jobs:
   run-bot:
-    runs-on: ubuntu-latest
+    # ubuntu-latest가 2026-10-19부터 Ubuntu 26.04로 바뀌면서 Python 3.9 빌드가 없어 실패(10/26~). 24.04로 고정.
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     
