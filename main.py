@@ -1,6 +1,6 @@
 """
 MaxFHR & AMEX 한국 호텔 가격 모니터링 (GitHub Actions용)
-기능: MaxFHR 수집, AMEX 수집, 매칭, 가격 비교(어제 대비 분류 + 역대최저 표시), 텔레그램 알림, 가격 이력 누적
+기능: MaxFHR 수집(프로모션 문구 포함), 가격 비교(어제 대비 분류 + 역대최저 표시), 텔레그램 알림, 가격 이력 누적
 """
 
 import asyncio
@@ -11,7 +11,6 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
-from difflib import SequenceMatcher
 from typing import Optional
 from storage import HotelStorage
 
@@ -35,7 +34,6 @@ logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 PRICE_HISTORY_FILE = "data/price_history.json"
-AMEX_LIST_URL = "https://www.americanexpress.com/en-us/travel/discover/property-results/dt/2/d/South%20Korea?ref=search&intlink=US-travel-discover-subnavSearch-location-South%20Korea"
 MAXFHR_KOREA_URL = "https://maxfhr.com/?programs=FHR&q=South+Korea&search_type=COUNTRY"
 KOREA_LOCATION_KEYWORDS = (
     " seoul",
@@ -156,6 +154,20 @@ def clean_promo(s: str) -> str:
     s = clean_text(s)
     return s
 
+# AMEX 사이트는 2026-10월 기준 자동 접속을 403으로 막아서(10월 내내 수집 0건),
+# 프로모션은 MaxFHR 카드에 같이 나오는 문구("Complimentary third night" 등)에서 가져온다.
+PROMO_KEYWORDS = ["Complimentary third night", "Complimentary fourth night", "% off", "Special Offer"]
+
+def extract_promo(lines) -> Optional[str]:
+    lines = [line.strip() for line in lines if line.strip()]
+    for i, line in enumerate(lines):
+        if any(keyword in line for keyword in PROMO_KEYWORDS):
+            parts = [line]
+            if i + 1 < len(lines) and ("Book by" in lines[i + 1] or "for travel" in lines[i + 1]):
+                parts.append(lines[i + 1])
+            return " ".join(parts)
+    return None
+
 def create_driver():
     options = Options()
     options.add_argument("--headless=new")
@@ -214,6 +226,7 @@ def fetch_maxfhr_hotel_detail(driver, hotel_code: str, hotel_meta: dict) -> Opti
             "credit": credit,
             "url": hotel_meta["url"],
             "normalized_name": hotel_code,
+            "promo": extract_promo(text.split("\n")),
         }
     except Exception as e:
         print(f"    - fallback failed for {hotel_meta['name']}: {e}")
@@ -280,6 +293,7 @@ def fetch_maxfhr_country(driver, retry=3):
                             "credit": credit,
                             "url": link,
                             "normalized_name": norm_name,
+                            "promo": extract_promo(lines),
                         })
                         count += 1
                 except Exception:
@@ -422,104 +436,6 @@ def fetch_maxfhr(driver, retry=3):
                 return []
     return []
 
-def fetch_amex(driver, retry=3):
-    for attempt in range(retry):
-        try:
-            print(f"AMEX 접속 시도 ({attempt+1}/{retry})...")
-            driver.get(AMEX_LIST_URL)
-            time.sleep(8)
-            try:
-                webdriver.ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-            except:
-                pass
-            for _ in range(3):
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(3)
-            cards = driver.find_elements(By.CSS_SELECTOR, "div.card, div.hotel-card")
-            print(f"  → {len(cards)}개 카드 발견")
-            hotels = []
-            for idx, card in enumerate(cards):
-                try:
-                    text = card.text
-                    lines = [line.strip() for line in text.split('\n') if line.strip()]
-                    if not lines: continue
-                    name = None
-                    skip_keywords = [
-                        "FINE HOTELS", "THE HOTEL COLLECTION", "ANDAZ",
-                        "CONRAD HOTELS & RESORTS", "FAIRMONT",
-                        "FOUR SEASONS HOTELS AND RESORTS", "GRAND HYATT",
-                        "PARK HYATT", "LOTTE HOTELS & RESORTS",
-                        "LUXURY COLLECTION", "IHG", "MARRIOTT"
-                    ]
-                    for line in lines:
-                        if line.isupper() and any(skip in line for skip in skip_keywords):
-                            continue
-                        if "South Korea" in line or line == "Korea":
-                            continue
-                        if len(line) > 50:
-                            continue
-                        if line and not line.startswith("Book") and not line.startswith("Complimentary"):
-                            name = line
-                            break
-                    if not name: continue
-                    promo_parts = []
-                    i = 0
-                    while i < len(lines):
-                        line = lines[i]
-                        if any(keyword in line for keyword in [
-                            "Complimentary third night", "Complimentary fourth night",
-                            "% off", "Special Offer"
-                        ]):
-                            promo_parts.append(line)
-                            if i + 1 < len(lines):
-                                next_line = lines[i + 1]
-                                if "Book by" in next_line or "for travel" in next_line:
-                                    promo_parts.append(next_line)
-                            break
-                        i += 1
-                    promo = " ".join(promo_parts) if promo_parts else None
-                    norm_name = normalize_hotel_name(name)
-                    if not is_korea_hotel(name, norm_name):
-                        print(f"  - skip non-Korea AMEX result: {name}")
-                        continue
-                    hotels.append({
-                        "name": name,
-                        "promo": promo,
-                        "normalized_name": norm_name
-                    })
-                except Exception as e:
-                    continue
-            if hotels:
-                print(f"✅ AMEX 수집 성공: {len(hotels)}개 호텔")
-                return hotels
-            else:
-                raise Exception("호텔 데이터 0개")
-        except Exception as e:
-            if attempt < retry - 1:
-                print(f"⚠️ AMEX 재시도 중... ({attempt+1}/{retry}) - {e}")
-                time.sleep(10)
-                continue
-            else:
-                print(f"⚠️ AMEX 최종 실패 (MaxFHR만 사용): {e}")
-                return []
-    return []
-
-def match_hotels(amex_list, maxfhr_list):
-    matched = []
-    for mf in maxfhr_list:
-        best_amex = None
-        best_score = 0
-        for am in amex_list:
-            score = SequenceMatcher(None, mf['normalized_name'], am['normalized_name']).ratio()
-            if score > best_score:
-                best_score = score
-                best_amex = am
-        if best_score > 0.6:
-            matched.append({"maxfhr": mf, "amex": best_amex})
-        else:
-            matched.append({"maxfhr": mf, "amex": {"name": mf['name'], "promo": None}})
-    return matched
-
 # --- [메인 실행 로직] ---
 
 def build_section(title: str, items: list) -> str:
@@ -554,7 +470,6 @@ async def run():
 
         # 1) 데이터 수집
         maxfhr_data = fetch_maxfhr_country(driver, retry=3)
-        amex_data = fetch_amex(driver, retry=3)
 
         if not maxfhr_data:
             print("❌ 호텔 데이터를 하나도 못 가져왔습니다.")
@@ -566,8 +481,11 @@ async def run():
                 )
             return
 
-        # 2) 매칭
-        final_list = match_hotels(amex_data, maxfhr_data)
+        # 2) 프로모션은 MaxFHR 카드 문구 사용 (AMEX 직접 수집은 403 차단으로 중단)
+        final_list = [
+            {"maxfhr": mf, "amex": {"name": mf["name"], "promo": mf.get("promo")}}
+            for mf in maxfhr_data
+        ]
 
         # 3) 가격 비교
         #    - 분류 기준: 어제(직전 실행) 대비
